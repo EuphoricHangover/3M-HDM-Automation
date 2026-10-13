@@ -110,7 +110,7 @@ public static class WindowFinder
 
     private static string? NormalizeProcessName(string? name)
     {
-        if (string.IsNullOrWhiteSpace(name)) return null;
+        if (string.IsNullOrWhiteSpace(name) || name is "any" or "*") return null; // null = every program
         return name.EndsWith(".exe", StringComparison.OrdinalIgnoreCase) ? name[..^4] : name;
     }
 

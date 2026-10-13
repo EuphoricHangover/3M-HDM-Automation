@@ -13,7 +13,7 @@ const string Usage = """
       hdm inspect     List the program's windows and controls (class names and sizes, no text)
 
     Common options (defaults in brackets)
-      --process <name>     program to look for [wfront]
+      --process <name>     program to look for [wfront]; "any" searches every program
       --title <text>       part of the window title [Current Summaries]
 
     find-item options
@@ -169,6 +169,16 @@ static int FindItem(Options o)
 
     // 1. Find the window. wfront.exe may have several open; the title picks the right one.
     var windows = WindowFinder.FindByTitle(processName, title);
+    if (windows.Count == 0 && !processName.Equals("any", StringComparison.OrdinalIgnoreCase))
+    {
+        var elsewhere = WindowFinder.FindByTitle("any", title);
+        if (elsewhere.Count > 0)
+        {
+            var owners = string.Join(", ", elsewhere.Select(w => $"'{w.ProcessName}'").Distinct());
+            Log($"No '{processName}' window has that title, but a window in another program does: {owners}. Run again with --process {elsewhere[0].ProcessName}.");
+            return ExitNoWindow;
+        }
+    }
     if (windows.Count == 0)
     {
         Log($"No visible '{processName}' window with a title containing '{title}'. Run 'hdm inspect' to see what is open.");
