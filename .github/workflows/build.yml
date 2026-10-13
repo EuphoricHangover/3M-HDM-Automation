@@ -1,0 +1,24 @@
+name: build
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+      - name: Test
+        run: dotnet test tests/HdmAutomation.Core.Tests -c Release
+      - name: Get OCR model
+        run: ./tools/Get-Tessdata.ps1
+      - name: Publish (self-contained, no .NET install needed to run)
+        run: dotnet publish src/HdmAutomation.Cli -c Release -r win-x64 --self-contained -p:PublishSingleFile=false -o publish
+      - uses: actions/upload-artifact@v4
+        with:
+          name: hdm-win-x64
+          path: publish

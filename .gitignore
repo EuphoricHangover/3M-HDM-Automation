@@ -1,0 +1,9 @@
+bin/
+obj/
+*.user
+.vs/
+# OCR model: download with tools/Get-Tessdata.ps1
+tessdata/*.traineddata
+# Debug dumps can contain screen text (possibly PHI). Never commit them.
+dump/
+inspect-*.txt

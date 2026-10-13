@@ -1,0 +1,50 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{3A266388-E9EA-4516-AD23-C3C6194A7C84}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HdmAutomation.Cli", "src\HdmAutomation.Cli\HdmAutomation.Cli.csproj", "{9E7D2B77-C3AE-4C17-BDA5-EC76EA44CBD3}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HdmAutomation.Core", "src\HdmAutomation.Core\HdmAutomation.Core.csproj", "{06E5AC7C-D81C-45ED-8EE9-E25B2100477A}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HdmAutomation.Windows", "src\HdmAutomation.Windows\HdmAutomation.Windows.csproj", "{69F3A7FE-CA08-485C-8FA7-A108DF672A1F}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{08E8E7BC-E0E8-4019-8E33-BEBDE8C53DE1}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HdmAutomation.Core.Tests", "tests\HdmAutomation.Core.Tests\HdmAutomation.Core.Tests.csproj", "{1B8C303A-3C2B-4C08-BCEE-1F9F7573733C}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{9E7D2B77-C3AE-4C17-BDA5-EC76EA44CBD3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9E7D2B77-C3AE-4C17-BDA5-EC76EA44CBD3}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9E7D2B77-C3AE-4C17-BDA5-EC76EA44CBD3}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9E7D2B77-C3AE-4C17-BDA5-EC76EA44CBD3}.Release|Any CPU.Build.0 = Release|Any CPU
+		{06E5AC7C-D81C-45ED-8EE9-E25B2100477A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{06E5AC7C-D81C-45ED-8EE9-E25B2100477A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{06E5AC7C-D81C-45ED-8EE9-E25B2100477A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{06E5AC7C-D81C-45ED-8EE9-E25B2100477A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{69F3A7FE-CA08-485C-8FA7-A108DF672A1F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{69F3A7FE-CA08-485C-8FA7-A108DF672A1F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{69F3A7FE-CA08-485C-8FA7-A108DF672A1F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{69F3A7FE-CA08-485C-8FA7-A108DF672A1F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1B8C303A-3C2B-4C08-BCEE-1F9F7573733C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1B8C303A-3C2B-4C08-BCEE-1F9F7573733C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1B8C303A-3C2B-4C08-BCEE-1F9F7573733C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1B8C303A-3C2B-4C08-BCEE-1F9F7573733C}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{9E7D2B77-C3AE-4C17-BDA5-EC76EA44CBD3} = {3A266388-E9EA-4516-AD23-C3C6194A7C84}
+		{06E5AC7C-D81C-45ED-8EE9-E25B2100477A} = {3A266388-E9EA-4516-AD23-C3C6194A7C84}
+		{69F3A7FE-CA08-485C-8FA7-A108DF672A1F} = {3A266388-E9EA-4516-AD23-C3C6194A7C84}
+		{1B8C303A-3C2B-4C08-BCEE-1F9F7573733C} = {08E8E7BC-E0E8-4019-8E33-BEBDE8C53DE1}
+	EndGlobalSection
+EndGlobal
