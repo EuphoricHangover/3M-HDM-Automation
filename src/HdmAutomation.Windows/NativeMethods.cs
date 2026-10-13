@@ -66,6 +66,21 @@ internal static class NativeMethods
 
     internal const uint GaRoot = 2;
 
+    [StructLayout(LayoutKind.Sequential)]
+    internal struct POINT
+    {
+        public int X, Y;
+    }
+
+    [DllImport("user32.dll")]
+    internal static extern bool GetCursorPos(out POINT point);
+
+    [DllImport("user32.dll")]
+    internal static extern IntPtr WindowFromPoint(POINT point);
+
+    [DllImport("user32.dll")]
+    internal static extern IntPtr GetParent(IntPtr hWnd);
+
     [DllImport("user32.dll")]
     internal static extern bool IsWindowVisible(IntPtr hWnd);
 

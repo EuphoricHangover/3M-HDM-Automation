@@ -55,6 +55,26 @@ public static class WindowFinder
         return topLevel.SelectMany(w => Children(w.Handle)).Where(Matches).ToList();
     }
 
+    /// <summary>
+    /// The window under the mouse pointer and each of its parents up to the top-level window.
+    /// Empty if the point has no window of its own.
+    /// </summary>
+    public static IReadOnlyList<WindowInfo> ChainAtCursor(out Point cursor)
+    {
+        NativeMethods.GetCursorPos(out var pt);
+        cursor = new Point(pt.X, pt.Y);
+
+        var processNames = new Dictionary<int, string>();
+        var chain = new List<WindowInfo>();
+        var handle = NativeMethods.WindowFromPoint(pt);
+        while (handle != IntPtr.Zero && chain.Count < 20)
+        {
+            chain.Add(Describe(handle, processNames));
+            handle = NativeMethods.GetParent(handle);
+        }
+        return chain;
+    }
+
     /// <summary>The top-level window that contains <paramref name="handle"/> (or the window itself if it is top-level).</summary>
     public static IntPtr RootOf(IntPtr handle)
     {

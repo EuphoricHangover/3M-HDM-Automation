@@ -30,6 +30,7 @@ const string Usage = """
     inspect options
       --show-titles        also print window titles (they may contain patient names)
       --all                list every window and control with class and size, titles or not
+      --at-cursor          after a 5 second countdown, report the program/window under the mouse pointer
       --find-class <text>  search ALL programs for visible controls whose class contains this (e.g. TEIXTreeView)
 
     Exit codes: 0 found, 1 error, 2 not found, 3 ambiguous, 4 window not found
@@ -53,7 +54,8 @@ try
     {
         case "inspect":
             {
-                var o = Options.Parse(rest, new HashSet<string> { "show-titles", "all" }, new HashSet<string>(common) { "find-class" });
+                var o = Options.Parse(rest, new HashSet<string> { "show-titles", "all", "at-cursor" }, new HashSet<string>(common) { "find-class" });
+                if (o.Has("at-cursor")) return AtCursor();
                 if (o.Get("find-class") is { } cls) return FindClass(cls);
                 return Inspect(o.Get("process", "wfront"), o.Get("title", "Current Summaries"), o.Has("show-titles"), o.Has("all"));
             }
@@ -78,6 +80,30 @@ catch (Exception ex)
     // Message only: stack traces and inner data could echo screen text.
     Console.Error.WriteLine($"Failed: {ex.Message}");
     return ExitError;
+}
+
+static int AtCursor()
+{
+    Log("Move the mouse over the list you want identified and keep it still. Reading in 5 seconds...");
+    for (var i = 5; i > 0; i--)
+    {
+        Console.Write($"{i} ");
+        Thread.Sleep(1000);
+    }
+    Console.WriteLine();
+
+    var chain = WindowFinder.ChainAtCursor(out var cursor);
+    Log($"Mouse is at ({cursor.X},{cursor.Y})");
+    if (chain.Count == 0)
+    {
+        Log("No window of its own is under the pointer.");
+        return ExitNoWindow;
+    }
+    foreach (var w in chain)
+    {
+        Log($"  process '{w.ProcessName}' (pid {w.ProcessId})  {w}{(w.Visible ? "" : "  [hidden]")}");
+    }
+    return ExitFound;
 }
 
 static int FindClass(string classContains)
