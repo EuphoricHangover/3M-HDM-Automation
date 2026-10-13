@@ -25,8 +25,8 @@ Windows are found by process and title, lists are read with offline OCR ([Tesser
 
 ```
 hdm inspect                       # what windows/controls exist (class names and sizes, no text)
-hdm find-item                     # find the item and report where it is
-hdm find-item --scroll            # also scroll the list if it's not in view
+hdm find-item                     # find the item (scrolls the list as needed) and report where it is
+hdm find-item --no-scroll         # only look at the rows currently visible
 hdm find-item --click             # and click it
 hdm find-item --dump-dir dump     # save what the OCR saw (screenshots + text) for troubleshooting
 ```

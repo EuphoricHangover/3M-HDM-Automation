@@ -5,5 +5,5 @@ namespace HdmAutomation.Windows;
 /// <summary>A window or child control found on screen. Bounds are screen pixels.</summary>
 public sealed record WindowInfo(IntPtr Handle, string Title, string ClassName, int ProcessId, string ProcessName, Rectangle Bounds, bool Visible)
 {
-    public override string ToString() => $"0x{Handle.ToInt64():X} {ClassName} {Bounds.Width}x{Bounds.Height} at ({Bounds.X},{Bounds.Y})";
+    public override string ToString() => $"{ProcessName}.exe 0x{Handle.ToInt64():X} {ClassName} {Bounds.Width}x{Bounds.Height} at ({Bounds.X},{Bounds.Y})";
 }

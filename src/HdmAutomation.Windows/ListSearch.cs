@@ -6,7 +6,7 @@ namespace HdmAutomation.Windows;
 public sealed record ListSearchOptions
 {
     /// <summary>Scroll the list with the mouse wheel to look beyond the rows currently visible.</summary>
-    public bool Scroll { get; init; }
+    public bool Scroll { get; init; } = true;
 
     public int MaxPages { get; init; } = 40;
 
@@ -61,6 +61,10 @@ public static class ListSearch
             {
                 if (thisPage.SetEquals(previousPage))
                 {
+                    if (page == 2)
+                    {
+                        warnings.Add("The list did not move after scrolling, so the mouse wheel may not work on this control. Only the visible rows were searched.");
+                    }
                     log("Reached the end of the list");
                     break;
                 }
