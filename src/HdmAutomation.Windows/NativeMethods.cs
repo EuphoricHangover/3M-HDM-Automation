@@ -13,12 +13,30 @@ internal static class NativeMethods
         public int Left, Top, Right, Bottom;
     }
 
-    [StructLayout(LayoutKind.Sequential)]
+    // Windows' INPUT is a tagged union: the mouse and keyboard variants share the same bytes.
+    [StructLayout(LayoutKind.Explicit)]
     internal struct INPUT
     {
-        public uint Type;
-        public MOUSEINPUT Mouse;
+        [FieldOffset(0)] public uint Type;
+        [FieldOffset(8)] public MOUSEINPUT Mouse;
+        [FieldOffset(8)] public KEYBDINPUT Keyboard;
     }
+
+    [StructLayout(LayoutKind.Sequential)]
+    internal struct KEYBDINPUT
+    {
+        public ushort Vk;
+        public ushort Scan;
+        public uint Flags;
+        public uint Time;
+        public IntPtr ExtraInfo;
+    }
+
+    internal const uint InputKeyboard = 1;
+    internal const uint KeyUp = 0x0002;
+
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+    internal static extern short VkKeyScan(char ch);
 
     [StructLayout(LayoutKind.Sequential)]
     internal struct MOUSEINPUT

@@ -20,6 +20,18 @@ public static class InputSender
         Send(Mouse(NativeMethods.MouseWheel, notches * 120));
     }
 
+    /// <summary>Presses and releases the key that types <paramref name="ch"/> (shift state is ignored; list type-ahead is not case-sensitive).</summary>
+    public static void PressKey(char ch)
+    {
+        var scan = NativeMethods.VkKeyScan(ch);
+        if (scan == -1) throw new ArgumentException($"No key on this keyboard layout types '{ch}'.");
+        var vk = (ushort)(scan & 0xFF);
+
+        Send(
+            new NativeMethods.INPUT { Type = NativeMethods.InputKeyboard, Keyboard = new NativeMethods.KEYBDINPUT { Vk = vk } },
+            new NativeMethods.INPUT { Type = NativeMethods.InputKeyboard, Keyboard = new NativeMethods.KEYBDINPUT { Vk = vk, Flags = NativeMethods.KeyUp } });
+    }
+
     private static void MoveTo(Point p)
     {
         var left = NativeMethods.GetSystemMetrics(NativeMethods.SmXVirtualScreen);

@@ -19,6 +19,7 @@ const string Usage = """
     find-item options
       --item <text>        name to find in the list [TB-Urology Surgery Stats]
       --list-class <text>  class name of the list control [TEIXTreeView]; if none is found, the whole window is read
+      --no-jump            skip the click-and-press-first-letter shortcut (default: jump first, then scroll if needed)
       --no-scroll          only search the rows currently visible (default: scroll to the top, then page down until found)
       --max-pages <n>      stop after n pages when scrolling [40]
       --notches <n>        wheel notches per page [3]
@@ -62,7 +63,7 @@ try
         case "find-item":
             {
                 var valued = new HashSet<string>(common) { "item", "list-class", "max-pages", "notches", "place", "tessdata", "dump-dir" };
-                var o = Options.Parse(rest, new HashSet<string> { "no-scroll", "click" }, valued);
+                var o = Options.Parse(rest, new HashSet<string> { "no-scroll", "no-jump", "click" }, valued);
                 return FindItem(o);
             }
         default:
@@ -226,6 +227,7 @@ static int FindItem(Options o)
     var options = new ListSearchOptions
     {
         Scroll = !o.Has("no-scroll"),
+        JumpToFirstLetter = !o.Has("no-jump"),
         MaxPages = o.GetInt("max-pages", 40),
         NotchesPerPage = o.GetInt("notches", 3),
         DumpDirectory = o.Get("dump-dir"),
