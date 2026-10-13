@@ -41,6 +41,17 @@ public static class InputSender
             new NativeMethods.INPUT { Type = NativeMethods.InputKeyboard, Keyboard = new NativeMethods.KEYBDINPUT { Vk = vk, Flags = NativeMethods.KeyUp } });
     }
 
+    public const ushort VkBack = 0x08, VkEnd = 0x23, VkHome = 0x24, VkDelete = 0x2E, VkShift = 0x10, VkControl = 0x11;
+
+    /// <summary>Presses a key by virtual-key code, holding the given modifier keys (e.g. Shift) while it is pressed.</summary>
+    public static void PressVirtualKey(ushort vk, params ushort[] modifiers)
+    {
+        foreach (var m in modifiers) Send(Key(m, false));
+        Send(Key(vk, false), Key(vk, true));
+        foreach (var m in modifiers.Reverse()) Send(Key(m, true));
+        Thread.Sleep(30);
+    }
+
     /// <summary>Selects everything in the focused box (Ctrl+A), so typing replaces what was there.</summary>
     public static void SelectAll()
     {

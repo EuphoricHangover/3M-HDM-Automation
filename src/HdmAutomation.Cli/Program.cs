@@ -347,17 +347,41 @@ static int FillAndBuild(WindowInfo dialog, string item, string range, string edi
     var edit = edits[0];
     InputSender.Click(new Point(edit.Bounds.X + edit.Bounds.Width / 2, edit.Bounds.Y + edit.Bounds.Height / 2));
     Thread.Sleep(150);
+
+    string ReadEdit() =>
+        new[] { WindowFinder.TextOf(edit.Handle) }
+            .Concat(WindowFinder.Children(edit.Handle).Select(c => c.Title))
+            .FirstOrDefault(t => t.Length > 0) ?? string.Empty;
+
+    // Clear whatever is there. Some boxes ignore Ctrl+A, so escalate until it is really empty.
     InputSender.SelectAll();
+    InputSender.PressVirtualKey(InputSender.VkDelete);
+    Thread.Sleep(150);
+    if (ReadEdit().Length > 0)
+    {
+        InputSender.PressVirtualKey(InputSender.VkHome);
+        InputSender.PressVirtualKey(InputSender.VkEnd, InputSender.VkShift); // select Home..End
+        InputSender.PressVirtualKey(InputSender.VkDelete);
+        Thread.Sleep(150);
+    }
+    if (ReadEdit().Length > 0)
+    {
+        InputSender.PressVirtualKey(InputSender.VkEnd);
+        for (var i = ReadEdit().Length + 5; i > 0; i--) InputSender.PressVirtualKey(InputSender.VkBack);
+        Thread.Sleep(150);
+    }
+    var leftover = ReadEdit();
+    if (leftover.Length > 0)
+    {
+        Log($"Check failed: could not clear the Search Ranges box ({leftover.Length} character(s) left). Nothing was typed.");
+        return ExitStepFailed;
+    }
+
     InputSender.TypeText(range);
     Thread.Sleep(200);
 
     // Check 2: the box really contains what we meant to type.
-    // Composite boxes (like a button edit) keep the text in an inner edit control, so check it as well.
-    var typed = WindowFinder.TextOf(edit.Handle);
-    if (typed != range)
-    {
-        typed = WindowFinder.Children(edit.Handle).Select(c => c.Title).FirstOrDefault(t => t == range) ?? typed;
-    }
+    var typed = ReadEdit();
     if (typed != range)
     {
         Log($"Check failed: the Search Ranges box now reads '{typed}', expected '{range}'. Build Now was not clicked.");
