@@ -28,6 +28,7 @@ const string Usage = """
       --next-title <text>  after double-clicking, wait for a new window whose title contains this, then list its controls
                            [Properties for Summary when --range is used]
       --range <text>       type this into the window's Search Ranges box, e.g. 20260401-20260430 (needs --double-click)
+      --edit-class <text>  class name of the Search Ranges box [ButtonEdit]
       --build              also click Build Now (default: stop just before, as a dry run)
       --place <x,y,w,h>    move and resize the window first, in screen pixels
       --tessdata <dir>     folder holding eng.traineddata [tessdata next to hdm.exe]
@@ -67,7 +68,7 @@ try
             }
         case "find-item":
             {
-                var valued = new HashSet<string>(common) { "item", "list-class", "max-pages", "notches", "next-title", "range", "place", "tessdata", "dump-dir" };
+                var valued = new HashSet<string>(common) { "item", "list-class", "max-pages", "notches", "next-title", "range", "edit-class", "place", "tessdata", "dump-dir" };
                 var o = Options.Parse(rest, new HashSet<string> { "no-scroll", "no-jump", "click", "double-click", "build" }, valued);
                 return FindItem(o);
             }
@@ -266,7 +267,7 @@ static int FindItem(Options o)
 
         var dialog = WaitForNextWindow(window, nextTitle);
         if (dialog is null) return ExitNotFound;
-        return range is null ? ExitFound : FillAndBuild(dialog, item, range, o.Has("build"), ocr, options.DumpDirectory);
+        return range is null ? ExitFound : FillAndBuild(dialog, item, range, o.Get("edit-class", "ButtonEdit"), o.Has("build"), ocr, options.DumpDirectory);
     }
     if (o.Has("click"))
     {
@@ -303,7 +304,7 @@ static WindowInfo? WaitForNextWindow(WindowInfo previous, string title)
     return null;
 }
 
-static int FillAndBuild(WindowInfo dialog, string item, string range, bool build, TesseractOcr ocr, string? dumpDir)
+static int FillAndBuild(WindowInfo dialog, string item, string range, string editClass, bool build, TesseractOcr ocr, string? dumpDir)
 {
     if (!WindowController.BringToFront(WindowFinder.RootOf(dialog.Handle)))
     {
@@ -335,11 +336,11 @@ static int FillAndBuild(WindowInfo dialog, string item, string range, bool build
 
     // Step: the single Search Ranges box.
     var edits = WindowFinder.Children(dialog.Handle)
-        .Where(c => c.Visible && c.ClassName.Contains("Edit", StringComparison.OrdinalIgnoreCase))
+        .Where(c => c.Visible && c.ClassName.Contains(editClass, StringComparison.OrdinalIgnoreCase))
         .ToList();
     if (edits.Count != 1)
     {
-        Log($"Check failed: expected exactly one visible edit box in the window, found {edits.Count}. Nothing was typed or clicked.");
+        Log($"Check failed: expected exactly one visible '{editClass}' control in the window, found {edits.Count}. Nothing was typed or clicked.");
         foreach (var e in edits) Log($"    edit {e}");
         return ExitStepFailed;
     }
@@ -351,7 +352,12 @@ static int FillAndBuild(WindowInfo dialog, string item, string range, bool build
     Thread.Sleep(200);
 
     // Check 2: the box really contains what we meant to type.
+    // Composite boxes (like a button edit) keep the text in an inner edit control, so check it as well.
     var typed = WindowFinder.TextOf(edit.Handle);
+    if (typed != range)
+    {
+        typed = WindowFinder.Children(edit.Handle).Select(c => c.Title).FirstOrDefault(t => t == range) ?? typed;
+    }
     if (typed != range)
     {
         Log($"Check failed: the Search Ranges box now reads '{typed}', expected '{range}'. Build Now was not clicked.");
