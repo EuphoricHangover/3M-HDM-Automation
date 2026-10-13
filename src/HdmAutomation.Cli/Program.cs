@@ -33,7 +33,7 @@ const string Usage = """
                            Report Viewer click the sheet and select all (default: stop just before Build Now)
       --build-timeout <m>  minutes to wait for the report to finish building [30]
       --goto-key <keys>    key combination that opens the Report Viewer's go-to-cell box [f5]
-      --goto-cell <cell>   cell to go to before selecting down to the end of the data [A1]
+      --goto-cell <cell>   cell to go to before selecting down to the end of the data [A3]
       --copy-to <file>     after selecting, copy and save the table as this CSV file (may contain PHI!)
       --skip-goto-check    don't require a new window to appear when the go-to key is pressed
       --overwrite          allow --copy-to to replace an existing file
@@ -180,7 +180,7 @@ static int FindItem(Options o)
     var item = o.Get("item", "TB-Urology Surgery Stats");
     var listClass = o.Get("list-class", "TEIXTreeView");
     var tessdata = o.Get("tessdata", Path.Combine(AppContext.BaseDirectory, "tessdata"));
-    var viewerOptions = new ViewerOptions(o.Get("goto-key", "f5"), o.Get("goto-cell", "A1"), o.Get("copy-to"), o.Has("overwrite"), o.Has("skip-goto-check"));
+    var viewerOptions = new ViewerOptions(o.Get("goto-key", "f5"), o.Get("goto-cell", "A3"), o.Get("copy-to"), o.Has("overwrite"), o.Has("skip-goto-check"));
 
     // Fail now, not after a long report build, if the output file can't be written.
     if (viewerOptions.CopyTo is { } outPath)
