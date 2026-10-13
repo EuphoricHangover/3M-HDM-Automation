@@ -106,6 +106,24 @@ public static class WindowFinder
         return null;
     }
 
+    /// <summary>
+    /// A control's current text (an edit box's contents, a button's caption), asked of the control itself with
+    /// WM_GETTEXT, which works across programs where GetWindowText does not.
+    /// </summary>
+    public static string TextOf(IntPtr handle)
+    {
+        const uint timeoutMs = 1000;
+        if (NativeMethods.SendMessageTimeout(handle, NativeMethods.WmGetTextLength, IntPtr.Zero, IntPtr.Zero,
+                NativeMethods.SmtoAbortIfHung, timeoutMs, out var length) == IntPtr.Zero) return string.Empty;
+
+        var capacity = (int)Math.Clamp(length.ToInt64(), 0, 4096);
+        if (capacity == 0) return string.Empty;
+        var buffer = new System.Text.StringBuilder(capacity + 1);
+        if (NativeMethods.SendMessageTimeout(handle, NativeMethods.WmGetText, new IntPtr(capacity + 1), buffer,
+                NativeMethods.SmtoAbortIfHung, timeoutMs, out _) == IntPtr.Zero) return string.Empty;
+        return buffer.ToString();
+    }
+
     private static long Area(WindowInfo w) => (long)w.Bounds.Width * w.Bounds.Height;
 
     private static string? NormalizeProcessName(string? name)
@@ -117,6 +135,7 @@ public static class WindowFinder
     private static WindowInfo Describe(IntPtr handle, Dictionary<int, string> processNames)
     {
         var title = NativeMethods.ReadText(b => NativeMethods.GetWindowText(handle, b, b.Length));
+        if (title.Length == 0) title = TextOf(handle);
         var className = NativeMethods.ReadText(b => NativeMethods.GetClassName(handle, b, b.Length));
         NativeMethods.GetWindowThreadProcessId(handle, out var pid);
         NativeMethods.GetWindowRect(handle, out var r);

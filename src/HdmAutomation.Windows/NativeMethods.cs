@@ -32,6 +32,16 @@ internal static class NativeMethods
         public IntPtr ExtraInfo;
     }
 
+    internal const uint WmGetText = 0x000D;
+    internal const uint WmGetTextLength = 0x000E;
+    internal const uint SmtoAbortIfHung = 0x0002;
+
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+    internal static extern IntPtr SendMessageTimeout(IntPtr hWnd, uint msg, IntPtr wParam, StringBuilder lParam, uint flags, uint timeoutMs, out IntPtr result);
+
+    [DllImport("user32.dll")]
+    internal static extern IntPtr SendMessageTimeout(IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam, uint flags, uint timeoutMs, out IntPtr result);
+
     internal const uint InputKeyboard = 1;
     internal const uint KeyUp = 0x0002;
 

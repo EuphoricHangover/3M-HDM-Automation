@@ -3,7 +3,7 @@ using HdmAutomation.Cli;
 using HdmAutomation.Core;
 using HdmAutomation.Windows;
 
-const int ExitFound = 0, ExitError = 1, ExitNotFound = 2, ExitAmbiguous = 3, ExitNoWindow = 4;
+const int ExitFound = 0, ExitError = 1, ExitNotFound = 2, ExitAmbiguous = 3, ExitNoWindow = 4, ExitStepFailed = 5;
 
 const string Usage = """
     hdm - proof of concept for automating wfront.exe
@@ -26,6 +26,9 @@ const string Usage = """
       --click              click the item once it is found (default: only report where it is)
       --double-click       double-click the item (opens it)
       --next-title <text>  after double-clicking, wait for a new window whose title contains this, then list its controls
+                           [Properties for Summary when --range is used]
+      --range <text>       type this into the window's Search Ranges box, e.g. 20260401-20260430 (needs --double-click)
+      --build              also click Build Now (default: stop just before, as a dry run)
       --place <x,y,w,h>    move and resize the window first, in screen pixels
       --tessdata <dir>     folder holding eng.traineddata [tessdata next to hdm.exe]
       --dump-dir <dir>     save each page's screenshot and OCR text there (may contain PHI!)
@@ -36,7 +39,7 @@ const string Usage = """
       --at-cursor          after a 5 second countdown, report the program/window under the mouse pointer
       --find-class <text>  search ALL programs for visible controls whose class contains this (e.g. TEIXTreeView)
 
-    Exit codes: 0 found, 1 error, 2 not found, 3 ambiguous, 4 window not found
+    Exit codes: 0 found, 1 error, 2 not found, 3 ambiguous, 4 window not found, 5 a check failed before typing/clicking
     """;
 
 static void Log(string message) => Console.WriteLine($"{DateTime.Now:HH:mm:ss}  {message}");
@@ -64,8 +67,8 @@ try
             }
         case "find-item":
             {
-                var valued = new HashSet<string>(common) { "item", "list-class", "max-pages", "notches", "next-title", "place", "tessdata", "dump-dir" };
-                var o = Options.Parse(rest, new HashSet<string> { "no-scroll", "no-jump", "click", "double-click" }, valued);
+                var valued = new HashSet<string>(common) { "item", "list-class", "max-pages", "notches", "next-title", "range", "place", "tessdata", "dump-dir" };
+                var o = Options.Parse(rest, new HashSet<string> { "no-scroll", "no-jump", "click", "double-click", "build" }, valued);
                 return FindItem(o);
             }
         default:
@@ -257,8 +260,13 @@ static int FindItem(Options o)
     {
         InputSender.DoubleClick(target);
         Log("Double-clicked.");
-        var nextTitle = o.Get("next-title");
-        return nextTitle is null ? ExitFound : WaitForNextWindow(window, nextTitle);
+        var range = o.Get("range");
+        var nextTitle = o.Get("next-title") ?? (range is null ? null : "Properties for Summary");
+        if (nextTitle is null) return ExitFound;
+
+        var dialog = WaitForNextWindow(window, nextTitle);
+        if (dialog is null) return ExitNotFound;
+        return range is null ? ExitFound : FillAndBuild(dialog, item, range, o.Has("build"), ocr, options.DumpDirectory);
     }
     if (o.Has("click"))
     {
@@ -272,7 +280,7 @@ static int FindItem(Options o)
     return ExitFound;
 }
 
-static int WaitForNextWindow(WindowInfo previous, string title)
+static WindowInfo? WaitForNextWindow(WindowInfo previous, string title)
 {
     Log($"Waiting up to 15 seconds for a window with '{title}' in its title");
     var deadline = DateTime.UtcNow.AddSeconds(15);
@@ -287,10 +295,99 @@ static int WaitForNextWindow(WindowInfo previous, string title)
             {
                 Log($"    child {c}{(c.Visible ? "" : "  [hidden]")}");
             }
-            return ExitFound;
+            return next;
         }
         Thread.Sleep(300);
     }
     Log("The expected window did not appear. The double-click may have missed, or the title differs: check it with 'hdm inspect --process any --show-titles'.");
-    return ExitNotFound;
+    return null;
+}
+
+static int FillAndBuild(WindowInfo dialog, string item, string range, bool build, TesseractOcr ocr, string? dumpDir)
+{
+    if (!WindowController.BringToFront(WindowFinder.RootOf(dialog.Handle)))
+    {
+        Log("Could not bring the new window to the front.");
+        return ExitError;
+    }
+
+    IReadOnlyList<OcrLine> ReadDialog()
+    {
+        using var shot = ScreenCapture.Capture(dialog.Bounds);
+        var lines = ocr.ReadLines(shot, dialog.Bounds.Location);
+        if (dumpDir is not null)
+        {
+            Directory.CreateDirectory(dumpDir);
+            shot.Save(Path.Combine(dumpDir, "dialog.png"));
+            File.WriteAllLines(Path.Combine(dumpDir, "dialog.txt"), lines.Select(l => l.Text));
+        }
+        return lines;
+    }
+
+    // Check 1: the window is showing the report we double-clicked, not some other one.
+    var match = TextMatcher.FindBest(item, ReadDialog());
+    if (match.Status != MatchStatus.Found)
+    {
+        Log($"Check failed: the new window does not show '{item}' ({match.Status}). Nothing was typed or clicked.");
+        return ExitStepFailed;
+    }
+    Log($"Check passed: the window shows '{item}'.");
+
+    // Step: the single Search Ranges box.
+    var edits = WindowFinder.Children(dialog.Handle)
+        .Where(c => c.Visible && c.ClassName.Contains("Edit", StringComparison.OrdinalIgnoreCase))
+        .ToList();
+    if (edits.Count != 1)
+    {
+        Log($"Check failed: expected exactly one visible edit box in the window, found {edits.Count}. Nothing was typed or clicked.");
+        foreach (var e in edits) Log($"    edit {e}");
+        return ExitStepFailed;
+    }
+    var edit = edits[0];
+    InputSender.Click(new Point(edit.Bounds.X + edit.Bounds.Width / 2, edit.Bounds.Y + edit.Bounds.Height / 2));
+    Thread.Sleep(150);
+    InputSender.SelectAll();
+    InputSender.TypeText(range);
+    Thread.Sleep(200);
+
+    // Check 2: the box really contains what we meant to type.
+    var typed = WindowFinder.TextOf(edit.Handle);
+    if (typed != range)
+    {
+        Log($"Check failed: the Search Ranges box now reads '{typed}', expected '{range}'. Build Now was not clicked.");
+        return ExitStepFailed;
+    }
+    Log($"Search Ranges set to '{range}'.");
+
+    // Step: Build Now. Real buttons expose their caption; otherwise read it off the screen.
+    Point? buttonAt = null;
+    var button = WindowFinder.Children(dialog.Handle)
+        .FirstOrDefault(c => c.Visible && TextMatcher.Normalize(c.Title).Contains("buildnow", StringComparison.Ordinal));
+    if (button is not null)
+    {
+        buttonAt = new Point(button.Bounds.X + button.Bounds.Width / 2, button.Bounds.Y + button.Bounds.Height / 2);
+    }
+    else
+    {
+        var found = TextMatcher.FindBest("Build Now", ReadDialog());
+        if (found.Status == MatchStatus.Found)
+        {
+            var b = found.Line!.Bounds;
+            buttonAt = new Point(b.X + b.Width / 2, b.Y + b.Height / 2);
+        }
+    }
+    if (buttonAt is null)
+    {
+        Log("Check failed: could not find a 'Build Now' button. Nothing was clicked.");
+        return ExitStepFailed;
+    }
+
+    if (!build)
+    {
+        Log($"Dry run: Build Now is at ({buttonAt.Value.X},{buttonAt.Value.Y}). Add --build to click it.");
+        return ExitFound;
+    }
+    InputSender.Click(buttonAt.Value);
+    Log("Clicked Build Now.");
+    return ExitFound;
 }

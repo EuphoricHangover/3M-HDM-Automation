@@ -41,6 +41,38 @@ public static class InputSender
             new NativeMethods.INPUT { Type = NativeMethods.InputKeyboard, Keyboard = new NativeMethods.KEYBDINPUT { Vk = vk, Flags = NativeMethods.KeyUp } });
     }
 
+    /// <summary>Selects everything in the focused box (Ctrl+A), so typing replaces what was there.</summary>
+    public static void SelectAll()
+    {
+        const ushort control = 0x11;
+        var a = (ushort)(NativeMethods.VkKeyScan('a') & 0xFF);
+        Send(Key(control, false), Key(a, false), Key(a, true), Key(control, true));
+    }
+
+    /// <summary>Types text one key at a time, as a person would.</summary>
+    public static void TypeText(string text)
+    {
+        const ushort shift = 0x10;
+        foreach (var ch in text)
+        {
+            var scan = NativeMethods.VkKeyScan(ch);
+            if (scan == -1) throw new ArgumentException($"No key on this keyboard layout types '{ch}'.");
+            var vk = (ushort)(scan & 0xFF);
+            var needsShift = (scan & 0x100) != 0;
+
+            if (needsShift) Send(Key(shift, false));
+            Send(Key(vk, false), Key(vk, true));
+            if (needsShift) Send(Key(shift, true));
+            Thread.Sleep(30);
+        }
+    }
+
+    private static NativeMethods.INPUT Key(ushort vk, bool up) => new()
+    {
+        Type = NativeMethods.InputKeyboard,
+        Keyboard = new NativeMethods.KEYBDINPUT { Vk = vk, Flags = up ? NativeMethods.KeyUp : 0 },
+    };
+
     private static void MoveTo(Point p)
     {
         var left = NativeMethods.GetSystemMetrics(NativeMethods.SmXVirtualScreen);

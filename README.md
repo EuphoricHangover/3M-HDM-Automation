@@ -28,6 +28,9 @@ hdm inspect                       # what windows/controls exist (class names and
 hdm find-item                     # find the item (scrolls the list as needed) and report where it is
 hdm find-item --no-scroll         # only look at the rows currently visible
 hdm find-item --click             # and click it
+hdm find-item --double-click --range 20260401-20260430
+                                  # open the item, check the "Properties for Summary" window, type the range;
+                                  # stops just before Build Now (add --build to click it)
 hdm find-item --dump-dir dump     # save what the OCR saw (screenshots + text) for troubleshooting
 ```
 
