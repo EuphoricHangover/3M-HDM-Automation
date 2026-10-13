@@ -13,6 +13,15 @@ public static class InputSender
         Send(Mouse(NativeMethods.MouseLeftDown), Mouse(NativeMethods.MouseLeftUp));
     }
 
+    public static void DoubleClick(Point screenPoint)
+    {
+        MoveTo(screenPoint);
+        Thread.Sleep(50);
+        // Two clicks in one batch land well inside the system's double-click time.
+        Send(Mouse(NativeMethods.MouseLeftDown), Mouse(NativeMethods.MouseLeftUp),
+            Mouse(NativeMethods.MouseLeftDown), Mouse(NativeMethods.MouseLeftUp));
+    }
+
     /// <summary>Scrolls the wheel over a point. Positive notches scroll up (towards the top of a list).</summary>
     public static void Wheel(Point screenPoint, int notches)
     {

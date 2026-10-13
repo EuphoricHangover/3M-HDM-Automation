@@ -24,6 +24,8 @@ const string Usage = """
       --max-pages <n>      stop after n pages when scrolling [40]
       --notches <n>        wheel notches per page [3]
       --click              click the item once it is found (default: only report where it is)
+      --double-click       double-click the item (opens it)
+      --next-title <text>  after double-clicking, wait for a new window whose title contains this, then list its controls
       --place <x,y,w,h>    move and resize the window first, in screen pixels
       --tessdata <dir>     folder holding eng.traineddata [tessdata next to hdm.exe]
       --dump-dir <dir>     save each page's screenshot and OCR text there (may contain PHI!)
@@ -62,8 +64,8 @@ try
             }
         case "find-item":
             {
-                var valued = new HashSet<string>(common) { "item", "list-class", "max-pages", "notches", "place", "tessdata", "dump-dir" };
-                var o = Options.Parse(rest, new HashSet<string> { "no-scroll", "no-jump", "click" }, valued);
+                var valued = new HashSet<string>(common) { "item", "list-class", "max-pages", "notches", "next-title", "place", "tessdata", "dump-dir" };
+                var o = Options.Parse(rest, new HashSet<string> { "no-scroll", "no-jump", "click", "double-click" }, valued);
                 return FindItem(o);
             }
         default:
@@ -251,6 +253,13 @@ static int FindItem(Options o)
     var target = new Point(match.Line!.Bounds.X + match.Line.Bounds.Width / 2, match.Line.Bounds.Y + match.Line.Bounds.Height / 2);
     Log($"'{item}' is at screen position ({target.X},{target.Y}), OCR confidence {match.Line.Confidence:F0}%");
 
+    if (o.Has("double-click"))
+    {
+        InputSender.DoubleClick(target);
+        Log("Double-clicked.");
+        var nextTitle = o.Get("next-title");
+        return nextTitle is null ? ExitFound : WaitForNextWindow(window, nextTitle);
+    }
     if (o.Has("click"))
     {
         InputSender.Click(target);
@@ -258,7 +267,30 @@ static int FindItem(Options o)
     }
     else
     {
-        Log("Not clicking (add --click to click it).");
+        Log("Not clicking (add --click or --double-click).");
     }
     return ExitFound;
+}
+
+static int WaitForNextWindow(WindowInfo previous, string title)
+{
+    Log($"Waiting up to 15 seconds for a window with '{title}' in its title");
+    var deadline = DateTime.UtcNow.AddSeconds(15);
+    while (DateTime.UtcNow < deadline)
+    {
+        var next = WindowFinder.FindByTitle("any", title).FirstOrDefault(w => w.Handle != previous.Handle);
+        if (next is not null)
+        {
+            Log($"New window opened: {next}");
+            // Structure only (class and size), never text, so this is safe to paste.
+            foreach (var c in WindowFinder.Children(next.Handle))
+            {
+                Log($"    child {c}{(c.Visible ? "" : "  [hidden]")}");
+            }
+            return ExitFound;
+        }
+        Thread.Sleep(300);
+    }
+    Log("The expected window did not appear. The double-click may have missed, or the title differs: check it with 'hdm inspect --process any --show-titles'.");
+    return ExitNotFound;
 }
