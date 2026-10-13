@@ -38,11 +38,29 @@ public static class WindowFinder
         return result;
     }
 
-    /// <summary>Visible top-level windows of a process whose title contains the given text (case-insensitive).</summary>
-    public static IReadOnlyList<WindowInfo> FindByTitle(string processName, string titleContains) =>
-        TopLevelWindows(processName)
-            .Where(w => w.Title.Contains(titleContains, StringComparison.OrdinalIgnoreCase))
-            .ToList();
+    /// <summary>
+    /// Visible windows of a process whose title contains the given text (case-insensitive). Looks at top-level
+    /// windows first; older programs often keep their "windows" inside one main window (MDI), so if none match,
+    /// the controls inside each top-level window are searched too.
+    /// </summary>
+    public static IReadOnlyList<WindowInfo> FindByTitle(string processName, string titleContains)
+    {
+        bool Matches(WindowInfo w) =>
+            w.Visible && w.Title.Contains(titleContains, StringComparison.OrdinalIgnoreCase);
+
+        var topLevel = TopLevelWindows(processName);
+        var direct = topLevel.Where(Matches).ToList();
+        if (direct.Count > 0) return direct;
+
+        return topLevel.SelectMany(w => Children(w.Handle)).Where(Matches).ToList();
+    }
+
+    /// <summary>The top-level window that contains <paramref name="handle"/> (or the window itself if it is top-level).</summary>
+    public static IntPtr RootOf(IntPtr handle)
+    {
+        var root = NativeMethods.GetAncestor(handle, NativeMethods.GaRoot);
+        return root == IntPtr.Zero ? handle : root;
+    }
 
     /// <summary>
     /// Finds the largest visible control whose class name contains <paramref name="classContains"/>. Looks inside

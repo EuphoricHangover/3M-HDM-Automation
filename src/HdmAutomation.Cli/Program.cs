@@ -80,18 +80,38 @@ catch (Exception ex)
 static int Inspect(string process, string title, bool showTitles)
 {
     var all = WindowFinder.TopLevelWindows(process);
+    if (all.Count == 0)
+    {
+        Log($"No visible top-level window belongs to a process named '{process}'.");
+        var names = WindowFinder.TopLevelWindows().Select(w => w.ProcessName).Distinct().OrderBy(n => n, StringComparer.OrdinalIgnoreCase);
+        Log($"Programs with visible windows right now: {string.Join(", ", names)}");
+        Log("Use --process <name> with the right one. If the program runs as administrator, run hdm as administrator too.");
+        return ExitNoWindow;
+    }
+
     Log($"{all.Count} visible top-level window(s) in '{process}'");
+    var found = false;
     foreach (var w in all)
     {
-        var matches = w.Title.Contains(title, StringComparison.OrdinalIgnoreCase);
-        Log($"  {w}{(matches ? "  <- title matches" : "")}{(showTitles ? $"  \"{w.Title}\"" : "")}");
-        if (!matches) continue;
-        foreach (var c in WindowFinder.Children(w.Handle))
+        var children = WindowFinder.Children(w.Handle);
+        var titleMatch = w.Title.Contains(title, StringComparison.OrdinalIgnoreCase);
+        found |= titleMatch;
+        Log($"  {w}  [{children.Count} child control(s)]{(titleMatch ? "  <- title matches" : "")}{(showTitles ? $"  \"{w.Title}\"" : "")}");
+
+        foreach (var c in children)
         {
-            Log($"      child {c}{(c.Visible ? "" : "  [hidden]")}");
+            var childMatch = c.Visible && c.Title.Contains(title, StringComparison.OrdinalIgnoreCase);
+            found |= childMatch;
+            // Child controls: always show those with a title match or a recognisable list class; the rest only with --show-titles.
+            if (childMatch || showTitles || c.ClassName.Contains("TreeView", StringComparison.OrdinalIgnoreCase))
+            {
+                Log($"      child {c}{(c.Visible ? "" : "  [hidden]")}{(childMatch ? "  <- title matches" : "")}{(showTitles ? $"  \"{c.Title}\"" : "")}");
+            }
         }
     }
-    return all.Count == 0 ? ExitNoWindow : ExitFound;
+
+    if (!found) Log($"Nothing has a title containing '{title}'. Run again with --show-titles to see the real titles, then pass one with --title.");
+    return found ? ExitFound : ExitNoWindow;
 }
 
 static int FindItem(Options o)
@@ -126,7 +146,7 @@ static int FindItem(Options o)
     }
 
     // 2. Bring it to the front: the screenshot only sees what is actually visible.
-    if (!WindowController.BringToFront(window.Handle))
+    if (!WindowController.BringToFront(WindowFinder.RootOf(window.Handle)))
     {
         Log("Could not bring the window to the front (is another program holding focus?).");
         return ExitError;

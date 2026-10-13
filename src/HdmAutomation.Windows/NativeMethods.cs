@@ -62,6 +62,11 @@ internal static class NativeMethods
     internal static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint processId);
 
     [DllImport("user32.dll")]
+    internal static extern IntPtr GetAncestor(IntPtr hWnd, uint flags);
+
+    internal const uint GaRoot = 2;
+
+    [DllImport("user32.dll")]
     internal static extern bool IsWindowVisible(IntPtr hWnd);
 
     [DllImport("user32.dll")]
