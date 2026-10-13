@@ -419,14 +419,28 @@ static int FillAndBuild(WindowInfo dialog, string item, string range, string edi
         Log($"Dry run: Build Now is at ({buttonAt.Value.X},{buttonAt.Value.Y}). Add --build to click it.");
         return ExitFound;
     }
-    // Remember the windows that exist now, so whatever opens next is recognisable as new.
-    var before = WindowFinder.TopLevelWindows(dialog.ProcessName).Select(w => w.Handle).ToHashSet();
+    // A Report Viewer left open from an earlier run would be mistaken for the new one: refuse to start.
+    var staleViewers = FindViewers();
+    if (staleViewers.Count > 0)
+    {
+        Log($"Check failed: a Report Viewer window is already open ({staleViewers[0]}). Close it and run again. Build Now was not clicked.");
+        return ExitStepFailed;
+    }
+
+    // Remember the windows that exist now (in every program), so whatever opens next is recognisable as new.
+    var before = WindowFinder.TopLevelWindows().Select(w => w.Handle).ToHashSet();
     InputSender.Click(buttonAt.Value);
     Log("Clicked Build Now.");
     return AfterBuild(dialog.ProcessName, before, timeoutMinutes, ocr, dumpDir);
 }
 
 /// <summary>Where a control with the given caption is, read from its Windows caption or, failing that, off the screen.</summary>
+static IReadOnlyList<WindowInfo> FindViewers() =>
+    WindowFinder.TopLevelWindows()
+        .Where(w => w.ClassName.Equals("TFrmViewer", StringComparison.OrdinalIgnoreCase) ||
+                    w.Title.Contains("Report Viewer", StringComparison.OrdinalIgnoreCase))
+        .ToList();
+
 static Point? LocateText(WindowInfo window, string text, TesseractOcr ocr)
 {
     var wanted = TextMatcher.Normalize(text);
@@ -484,12 +498,16 @@ static int AfterBuild(string processName, HashSet<IntPtr> before, int timeoutMin
     var viewerDeadline = DateTime.UtcNow.AddSeconds(90);
     while (viewer is null && DateTime.UtcNow < viewerDeadline)
     {
-        viewer = WindowFinder.FindByTitle(processName, "Report Viewer").FirstOrDefault(w => !before.Contains(w.Handle));
+        viewer = FindViewers().FirstOrDefault(w => !before.Contains(w.Handle));
         if (viewer is null) Thread.Sleep(500);
     }
     if (viewer is null)
     {
-        Log("Check failed: the Report Viewer window did not appear within 90 seconds.");
+        Log("Check failed: the Report Viewer window did not appear within 90 seconds. Windows that are new since Build Now (class and size only):");
+        foreach (var w in WindowFinder.TopLevelWindows().Where(w => !before.Contains(w.Handle)))
+        {
+            Log($"    {w}");
+        }
         return ExitStepFailed;
     }
     Log($"Report Viewer opened: {viewer}");
