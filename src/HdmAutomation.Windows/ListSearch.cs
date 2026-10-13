@@ -37,6 +37,9 @@ public static class ListSearch
         var center = new Point(listArea.X + listArea.Width / 2, listArea.Y + listArea.Height / 2);
         var pagesRead = 0;
 
+        // Always start from the top so every run begins in the same state, whether or not it then jumps.
+        if (options.Scroll) ScrollToTop(center, log);
+
         var first = target.FirstOrDefault(char.IsLetterOrDigit);
         if (options.JumpToFirstLetter && first != default)
         {
@@ -50,22 +53,24 @@ public static class ListSearch
             var jumped = ReadPages(ocr, listArea, target, options, log, warnings, ref pagesRead, maxPages: 5);
             if (jumped.Status != MatchStatus.NotFound || !options.Scroll)
                 return new ListSearchResult(jumped, pagesRead, warnings);
-            log("Not found after jumping; searching the whole list from the top");
-        }
 
-        if (options.Scroll)
-        {
-            log("Scrolling list to the top");
-            for (var i = 0; i < 12; i++)
-            {
-                InputSender.Wheel(center, 20);
-                Thread.Sleep(30);
-            }
-            Thread.Sleep(200);
+            log("Not found after jumping; searching the whole list from the top");
+            ScrollToTop(center, log);
         }
 
         var result = ReadPages(ocr, listArea, target, options, log, warnings, ref pagesRead, options.MaxPages);
         return new ListSearchResult(result, pagesRead, warnings);
+    }
+
+    private static void ScrollToTop(Point center, Action<string> log)
+    {
+        log("Scrolling list to the top");
+        for (var i = 0; i < 12; i++)
+        {
+            InputSender.Wheel(center, 20);
+            Thread.Sleep(30);
+        }
+        Thread.Sleep(200);
     }
 
     /// <summary>Reads the visible page, then scrolls down page by page, until the target is found or the list ends.</summary>
