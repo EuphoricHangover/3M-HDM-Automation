@@ -75,6 +75,12 @@ public static class WindowFinder
         return chain;
     }
 
+    /// <summary>Re-reads a window's current position, size and visibility.</summary>
+    public static WindowInfo Refresh(WindowInfo window) => Describe(window.Handle, new Dictionary<int, string>());
+
+    /// <summary>True while the window handle still refers to an existing window.</summary>
+    public static bool Exists(WindowInfo window) => NativeMethods.IsWindow(window.Handle);
+
     /// <summary>The top-level window that contains <paramref name="handle"/> (or the window itself if it is top-level).</summary>
     public static IntPtr RootOf(IntPtr handle)
     {

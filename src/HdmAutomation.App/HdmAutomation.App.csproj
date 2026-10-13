@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <Platforms>x64</Platforms>
+    <PlatformTarget>x64</PlatformTarget>
+    <AssemblyName>HdmAutomation</AssemblyName>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\HdmAutomation.Engine\HdmAutomation.Engine.csproj" />
+    <ProjectReference Include="..\HdmAutomation.Routines\HdmAutomation.Routines.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- OCR language data: put eng.traineddata in the repo's tessdata folder (tools/Get-Tessdata.ps1); it is copied next to the program. -->
+    <None Include="..\..\tessdata\*.traineddata" Link="tessdata\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+</Project>

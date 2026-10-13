@@ -13,12 +13,16 @@ jobs:
         with:
           dotnet-version: 8.0.x
       - name: Test
-        run: dotnet test tests/HdmAutomation.Core.Tests -c Release
+        run: |
+          dotnet test tests/HdmAutomation.Core.Tests -c Release
+          dotnet test tests/HdmAutomation.Engine.Tests -c Release
       - name: Get OCR model
         run: ./tools/Get-Tessdata.ps1
-      - name: Publish (self-contained, no .NET install needed to run)
-        run: dotnet publish src/HdmAutomation.Cli -c Release -r win-x64 --self-contained -p:PublishSingleFile=false -o publish
+      - name: Publish the program (self-contained, no .NET install needed to run)
+        run: |
+          dotnet publish src/HdmAutomation.App -c Release -r win-x64 --self-contained -o publish/HdmAutomation
+          dotnet publish src/HdmAutomation.Cli -c Release -r win-x64 --self-contained -o publish/HdmAutomation
       - uses: actions/upload-artifact@v4
         with:
-          name: hdm-win-x64
-          path: publish
+          name: HdmAutomation-win-x64
+          path: publish/HdmAutomation

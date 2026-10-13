@@ -31,7 +31,7 @@ public sealed record ListSearchResult(MatchResult Match, int PagesRead, IReadOnl
 /// <summary>Reads a list's visible rows with OCR, scrolling page by page, until a wanted name is found.</summary>
 public static class ListSearch
 {
-    public static ListSearchResult Find(TesseractOcr ocr, Rectangle listArea, string target, ListSearchOptions options, Action<string> log)
+    public static ListSearchResult Find(TesseractOcr ocr, Rectangle listArea, string target, ListSearchOptions options, Action<string> log, CancellationToken cancel = default)
     {
         var warnings = new List<string>();
         var center = new Point(listArea.X + listArea.Width / 2, listArea.Y + listArea.Height / 2);
@@ -50,7 +50,7 @@ public static class ListSearch
             Thread.Sleep(400);
 
             // Scrolling down from where the jump landed is enough; the target sorts after its first letter.
-            var jumped = ReadPages(ocr, listArea, target, options, log, warnings, ref pagesRead, maxPages: 5);
+            var jumped = ReadPages(ocr, listArea, target, options, log, warnings, ref pagesRead, 5, cancel);
             if (jumped.Status != MatchStatus.NotFound || !options.Scroll)
                 return new ListSearchResult(jumped, pagesRead, warnings);
 
@@ -58,7 +58,7 @@ public static class ListSearch
             ScrollToTop(center, log);
         }
 
-        var result = ReadPages(ocr, listArea, target, options, log, warnings, ref pagesRead, options.MaxPages);
+        var result = ReadPages(ocr, listArea, target, options, log, warnings, ref pagesRead, options.MaxPages, cancel);
         return new ListSearchResult(result, pagesRead, warnings);
     }
 
@@ -76,7 +76,7 @@ public static class ListSearch
     /// <summary>Reads the visible page, then scrolls down page by page, until the target is found or the list ends.</summary>
     private static MatchResult ReadPages(
         TesseractOcr ocr, Rectangle listArea, string target, ListSearchOptions options,
-        Action<string> log, List<string> warnings, ref int pagesRead, int maxPages)
+        Action<string> log, List<string> warnings, ref int pagesRead, int maxPages, CancellationToken cancel)
     {
         var center = new Point(listArea.X + listArea.Width / 2, listArea.Y + listArea.Height / 2);
         HashSet<string>? previousPage = null;
@@ -84,6 +84,7 @@ public static class ListSearch
 
         for (var page = 1; page <= maxPages; page++)
         {
+            cancel.ThrowIfCancellationRequested();
             using var shot = ScreenCapture.Capture(listArea);
             var lines = ocr.ReadLines(shot, listArea.Location);
             pagesRead++;

@@ -5,7 +5,7 @@
     <TargetFramework>net8.0-windows</TargetFramework>
     <Platforms>x64</Platforms>
     <PlatformTarget>x64</PlatformTarget>
-    <AssemblyName>hdm</AssemblyName>
+    <AssemblyName>hdmtool</AssemblyName>
     <ApplicationManifest>app.manifest</ApplicationManifest>
   </PropertyGroup>
 
@@ -13,9 +13,5 @@
     <ProjectReference Include="..\HdmAutomation.Windows\HdmAutomation.Windows.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <!-- Put eng.traineddata in the repo's tessdata folder (see tools/Get-Tessdata.ps1); it is copied next to hdm.exe. -->
-    <None Include="..\..\tessdata\*.traineddata" Link="tessdata\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
-  </ItemGroup>
 
 </Project>

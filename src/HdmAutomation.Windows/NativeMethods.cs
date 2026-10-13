@@ -68,6 +68,12 @@ internal static class NativeMethods
     [DllImport("kernel32.dll", SetLastError = true)]
     internal static extern bool GlobalUnlock(IntPtr handle);
 
+    [DllImport("user32.dll")]
+    internal static extern bool IsWindow(IntPtr hWnd);
+
+    [DllImport("user32.dll")]
+    internal static extern short GetAsyncKeyState(int vKey);
+
     internal const uint InputKeyboard = 1;
     internal const uint KeyUp = 0x0002;
 

@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Every .cs file in this folder that contains a class deriving from Routine becomes an entry in the program's
+    routine list. To add a routine: copy NewRoutineTemplate.txt to MyRoutine.cs, rename the class, fill in the steps.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <Platforms>x64</Platforms>
+    <PlatformTarget>x64</PlatformTarget>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\HdmAutomation.Engine\HdmAutomation.Engine.csproj" />
+  </ItemGroup>
+
+</Project>
