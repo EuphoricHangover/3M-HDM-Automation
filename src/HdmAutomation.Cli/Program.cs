@@ -29,6 +29,7 @@ const string Usage = """
 
     inspect options
       --show-titles        also print window titles (they may contain patient names)
+      --all                list every window and control with class and size, titles or not
 
     Exit codes: 0 found, 1 error, 2 not found, 3 ambiguous, 4 window not found
     """;
@@ -51,8 +52,8 @@ try
     {
         case "inspect":
             {
-                var o = Options.Parse(rest, new HashSet<string> { "show-titles" }, common);
-                return Inspect(o.Get("process", "wfront"), o.Get("title", "Current Summaries"), o.Has("show-titles"));
+                var o = Options.Parse(rest, new HashSet<string> { "show-titles", "all" }, common);
+                return Inspect(o.Get("process", "wfront"), o.Get("title", "Current Summaries"), o.Has("show-titles"), o.Has("all"));
             }
         case "find-item":
             {
@@ -77,10 +78,10 @@ catch (Exception ex)
     return ExitError;
 }
 
-static int Inspect(string process, string title, bool showTitles)
+static int Inspect(string process, string title, bool showTitles, bool all)
 {
-    var all = WindowFinder.TopLevelWindows(process);
-    if (all.Count == 0)
+    var windows = all ? WindowFinder.TopLevelWindows(process, includeHidden: true) : WindowFinder.TopLevelWindows(process);
+    if (windows.Count == 0)
     {
         Log($"No visible top-level window belongs to a process named '{process}'.");
         var names = WindowFinder.TopLevelWindows().Select(w => w.ProcessName).Distinct().OrderBy(n => n, StringComparer.OrdinalIgnoreCase);
@@ -89,21 +90,21 @@ static int Inspect(string process, string title, bool showTitles)
         return ExitNoWindow;
     }
 
-    Log($"{all.Count} visible top-level window(s) in '{process}'");
+    Log($"{windows.Count} top-level window(s) in '{process}'{(all ? " (including hidden)" : "")}");
     var found = false;
-    foreach (var w in all)
+    foreach (var w in windows)
     {
         var children = WindowFinder.Children(w.Handle);
         var titleMatch = w.Title.Contains(title, StringComparison.OrdinalIgnoreCase);
         found |= titleMatch;
-        Log($"  {w}  [{children.Count} child control(s)]{(titleMatch ? "  <- title matches" : "")}{(showTitles ? $"  \"{w.Title}\"" : "")}");
+        Log($"  {w}  [{children.Count} child control(s)]{(w.Visible ? "" : "  [hidden]")}{(titleMatch ? "  <- title matches" : "")}{(showTitles ? $"  \"{w.Title}\"" : "")}");
 
         foreach (var c in children)
         {
             var childMatch = c.Visible && c.Title.Contains(title, StringComparison.OrdinalIgnoreCase);
             found |= childMatch;
             // Child controls: always show those with a title match or a recognisable list class; the rest only with --show-titles.
-            if (childMatch || showTitles || c.ClassName.Contains("TreeView", StringComparison.OrdinalIgnoreCase))
+            if (all || childMatch || showTitles || c.ClassName.Contains("TreeView", StringComparison.OrdinalIgnoreCase))
             {
                 Log($"      child {c}{(c.Visible ? "" : "  [hidden]")}{(childMatch ? "  <- title matches" : "")}{(showTitles ? $"  \"{c.Title}\"" : "")}");
             }

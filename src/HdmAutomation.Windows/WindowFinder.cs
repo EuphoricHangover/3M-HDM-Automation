@@ -6,7 +6,7 @@ namespace HdmAutomation.Windows;
 /// <summary>Finds top-level windows and child controls using plain Win32 calls.</summary>
 public static class WindowFinder
 {
-    public static IReadOnlyList<WindowInfo> TopLevelWindows(string? processName = null)
+    public static IReadOnlyList<WindowInfo> TopLevelWindows(string? processName = null, bool includeHidden = false)
     {
         var wantedProcess = NormalizeProcessName(processName);
         var processNames = new Dictionary<int, string>();
@@ -15,7 +15,7 @@ public static class WindowFinder
         NativeMethods.EnumWindows((handle, _) =>
         {
             var info = Describe(handle, processNames);
-            if (info.Visible && (wantedProcess is null || info.ProcessName.Equals(wantedProcess, StringComparison.OrdinalIgnoreCase)))
+            if ((includeHidden || info.Visible) && (wantedProcess is null || info.ProcessName.Equals(wantedProcess, StringComparison.OrdinalIgnoreCase)))
             {
                 result.Add(info);
             }
