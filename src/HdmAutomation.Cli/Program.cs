@@ -29,7 +29,9 @@ const string Usage = """
                            [Properties for Summary when --range is used]
       --range <text>       type this into the window's Search Ranges box, e.g. 20260401-20260430 (needs --double-click)
       --edit-class <text>  class name of the Search Ranges box [ButtonEdit]
-      --build              also click Build Now (default: stop just before, as a dry run)
+      --build              click Build Now and carry on: wait for the report, click "Yes, now", then in the
+                           Report Viewer click the sheet and select all (default: stop just before Build Now)
+      --build-timeout <m>  minutes to wait for the report to finish building [30]
       --place <x,y,w,h>    move and resize the window first, in screen pixels
       --tessdata <dir>     folder holding eng.traineddata [tessdata next to hdm.exe]
       --dump-dir <dir>     save each page's screenshot and OCR text there (may contain PHI!)
@@ -68,7 +70,7 @@ try
             }
         case "find-item":
             {
-                var valued = new HashSet<string>(common) { "item", "list-class", "max-pages", "notches", "next-title", "range", "edit-class", "place", "tessdata", "dump-dir" };
+                var valued = new HashSet<string>(common) { "item", "list-class", "max-pages", "notches", "next-title", "range", "edit-class", "build-timeout", "place", "tessdata", "dump-dir" };
                 var o = Options.Parse(rest, new HashSet<string> { "no-scroll", "no-jump", "click", "double-click", "build" }, valued);
                 return FindItem(o);
             }
@@ -267,7 +269,7 @@ static int FindItem(Options o)
 
         var dialog = WaitForNextWindow(window, nextTitle);
         if (dialog is null) return ExitNotFound;
-        return range is null ? ExitFound : FillAndBuild(dialog, item, range, o.Get("edit-class", "ButtonEdit"), o.Has("build"), ocr, options.DumpDirectory);
+        return range is null ? ExitFound : FillAndBuild(dialog, item, range, o.Get("edit-class", "ButtonEdit"), o.Has("build"), o.GetInt("build-timeout", 30), ocr, options.DumpDirectory);
     }
     if (o.Has("click"))
     {
@@ -304,7 +306,7 @@ static WindowInfo? WaitForNextWindow(WindowInfo previous, string title)
     return null;
 }
 
-static int FillAndBuild(WindowInfo dialog, string item, string range, string editClass, bool build, TesseractOcr ocr, string? dumpDir)
+static int FillAndBuild(WindowInfo dialog, string item, string range, string editClass, bool build, int timeoutMinutes, TesseractOcr ocr, string? dumpDir)
 {
     if (!WindowController.BringToFront(WindowFinder.RootOf(dialog.Handle)))
     {
@@ -417,7 +419,107 @@ static int FillAndBuild(WindowInfo dialog, string item, string range, string edi
         Log($"Dry run: Build Now is at ({buttonAt.Value.X},{buttonAt.Value.Y}). Add --build to click it.");
         return ExitFound;
     }
+    // Remember the windows that exist now, so whatever opens next is recognisable as new.
+    var before = WindowFinder.TopLevelWindows(dialog.ProcessName).Select(w => w.Handle).ToHashSet();
     InputSender.Click(buttonAt.Value);
     Log("Clicked Build Now.");
+    return AfterBuild(dialog.ProcessName, before, timeoutMinutes, ocr, dumpDir);
+}
+
+/// <summary>Where a control with the given caption is, read from its Windows caption or, failing that, off the screen.</summary>
+static Point? LocateText(WindowInfo window, string text, TesseractOcr ocr)
+{
+    var wanted = TextMatcher.Normalize(text);
+    var control = WindowFinder.Children(window.Handle)
+        .FirstOrDefault(c => c.Visible && TextMatcher.Normalize(c.Title).Contains(wanted, StringComparison.Ordinal));
+    if (control is not null)
+    {
+        return new Point(control.Bounds.X + control.Bounds.Width / 2, control.Bounds.Y + control.Bounds.Height / 2);
+    }
+
+    if (window.Bounds.Width <= 0 || window.Bounds.Height <= 0) return null;
+    using var shot = ScreenCapture.Capture(window.Bounds);
+    var found = TextMatcher.FindBest(text, ocr.ReadLines(shot, window.Bounds.Location));
+    if (found.Status != MatchStatus.Found) return null;
+    var b = found.Line!.Bounds;
+    return new Point(b.X + b.Width / 2, b.Y + b.Height / 2);
+}
+
+static int AfterBuild(string processName, HashSet<IntPtr> before, int timeoutMinutes, TesseractOcr ocr, string? dumpDir)
+{
+    // 1. The report builds for as long as it takes; then a window with a "Yes, now" button appears.
+    Log($"Waiting up to {timeoutMinutes} minute(s) for the report to finish (looking for the Report Complete window)");
+    var deadline = DateTime.UtcNow.AddMinutes(timeoutMinutes);
+    var lastNote = DateTime.UtcNow;
+    Point? yesNow = null;
+    while (yesNow is null && DateTime.UtcNow < deadline)
+    {
+        // Any window may be the one: the progress window can turn into the Report Complete window in place.
+        foreach (var w in WindowFinder.TopLevelWindows(processName))
+        {
+            yesNow = LocateText(w, "Yes, now", ocr);
+            if (yesNow is not null) break;
+        }
+        if (yesNow is not null) break;
+
+        if (DateTime.UtcNow - lastNote > TimeSpan.FromMinutes(1))
+        {
+            Log("Still building...");
+            lastNote = DateTime.UtcNow;
+        }
+        Thread.Sleep(3000);
+    }
+    if (yesNow is null)
+    {
+        Log($"Gave up after {timeoutMinutes} minute(s): no 'Yes, now' button appeared. The report may still be building, or the window differs (use --dump-dir to see).");
+        return ExitStepFailed;
+    }
+
+    Log("Report complete. Clicking 'Yes, now'.");
+    InputSender.Click(yesNow.Value);
+
+    // 2. The Report Viewer opens with the sheet in an AfxOleControl42 pane.
+    Log("Waiting for the Report Viewer window");
+    WindowInfo? viewer = null;
+    var viewerDeadline = DateTime.UtcNow.AddSeconds(90);
+    while (viewer is null && DateTime.UtcNow < viewerDeadline)
+    {
+        viewer = WindowFinder.FindByTitle(processName, "Report Viewer").FirstOrDefault(w => !before.Contains(w.Handle));
+        if (viewer is null) Thread.Sleep(500);
+    }
+    if (viewer is null)
+    {
+        Log("Check failed: the Report Viewer window did not appear within 90 seconds.");
+        return ExitStepFailed;
+    }
+    Log($"Report Viewer opened: {viewer}");
+
+    Thread.Sleep(1500); // let the sheet finish drawing
+    var sheet = WindowFinder.FindControlByClass(viewer, "AfxOleControl42");
+    if (sheet is null)
+    {
+        Log("Check failed: no AfxOleControl42 sheet pane found in the Report Viewer.");
+        return ExitStepFailed;
+    }
+    Log($"Sheet pane: {sheet}");
+
+    if (!WindowController.BringToFront(WindowFinder.RootOf(viewer.Handle)))
+    {
+        Log("Check failed: could not bring the Report Viewer to the front.");
+        return ExitStepFailed;
+    }
+    // Click inside the sheet so it has keyboard focus, then select everything. This does not copy.
+    InputSender.Click(new Point(sheet.Bounds.X + sheet.Bounds.Width / 2, sheet.Bounds.Y + sheet.Bounds.Height / 2));
+    Thread.Sleep(300);
+    InputSender.SelectAll();
+    Thread.Sleep(300);
+
+    if (dumpDir is not null)
+    {
+        Directory.CreateDirectory(dumpDir);
+        using var shot = ScreenCapture.Capture(sheet.Bounds);
+        shot.Save(Path.Combine(dumpDir, "sheet-selected.png"));
+    }
+    Log("Selected everything in the sheet. Press Ctrl+C to copy it (the tool does not copy).");
     return ExitFound;
 }
