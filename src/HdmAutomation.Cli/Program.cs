@@ -32,9 +32,10 @@ const string Usage = """
       --build              click Build Now and carry on: wait for the report, click "Yes, now", then in the
                            Report Viewer click the sheet and select all (default: stop just before Build Now)
       --build-timeout <m>  minutes to wait for the report to finish building [30]
-      --goto-key <keys>    key combination that opens the Report Viewer's go-to-cell box [ctrl+g]
+      --goto-key <keys>    key combination that opens the Report Viewer's go-to-cell box [f5]
       --goto-cell <cell>   cell to go to before selecting down to the end of the data [A1]
       --copy-to <file>     after selecting, copy and save the table as this CSV file (may contain PHI!)
+      --skip-goto-check    don't require a new window to appear when the go-to key is pressed
       --overwrite          allow --copy-to to replace an existing file
       --place <x,y,w,h>    move and resize the window first, in screen pixels
       --tessdata <dir>     folder holding eng.traineddata [tessdata next to hdm.exe]
@@ -75,7 +76,7 @@ try
         case "find-item":
             {
                 var valued = new HashSet<string>(common) { "item", "list-class", "max-pages", "notches", "next-title", "range", "edit-class", "build-timeout", "goto-key", "goto-cell", "copy-to", "place", "tessdata", "dump-dir" };
-                var o = Options.Parse(rest, new HashSet<string> { "no-scroll", "no-jump", "click", "double-click", "build", "overwrite" }, valued);
+                var o = Options.Parse(rest, new HashSet<string> { "no-scroll", "no-jump", "click", "double-click", "build", "overwrite", "skip-goto-check" }, valued);
                 return FindItem(o);
             }
         default:
@@ -179,7 +180,7 @@ static int FindItem(Options o)
     var item = o.Get("item", "TB-Urology Surgery Stats");
     var listClass = o.Get("list-class", "TEIXTreeView");
     var tessdata = o.Get("tessdata", Path.Combine(AppContext.BaseDirectory, "tessdata"));
-    var viewerOptions = new ViewerOptions(o.Get("goto-key", "ctrl+g"), o.Get("goto-cell", "A1"), o.Get("copy-to"), o.Has("overwrite"));
+    var viewerOptions = new ViewerOptions(o.Get("goto-key", "f5"), o.Get("goto-cell", "A1"), o.Get("copy-to"), o.Has("overwrite"), o.Has("skip-goto-check"));
 
     // Fail now, not after a long report build, if the output file can't be written.
     if (viewerOptions.CopyTo is { } outPath)
@@ -543,8 +544,24 @@ static int AfterBuild(string processName, HashSet<IntPtr> before, int timeoutMin
     // cell and extend the selection to the end of the data instead.
     InputSender.Click(new Point(sheet.Bounds.X + sheet.Bounds.Width / 2, sheet.Bounds.Y + sheet.Bounds.Height / 2));
     Thread.Sleep(300);
+    var windowsBeforeGoto = WindowFinder.TopLevelWindows().Select(w => w.Handle).ToHashSet();
     InputSender.PressChord(viewerOptions.GotoKey);
-    Thread.Sleep(600);
+    if (!viewerOptions.SkipGotoCheck)
+    {
+        // Typing into the sheet without the go-to box open would change a cell, so make sure it opened first.
+        var opened = false;
+        for (var i = 0; i < 10 && !opened; i++)
+        {
+            Thread.Sleep(300);
+            opened = WindowFinder.TopLevelWindows().Any(w => !windowsBeforeGoto.Contains(w.Handle));
+        }
+        if (!opened)
+        {
+            Log($"Check failed: no go-to window appeared after pressing '{viewerOptions.GotoKey}'. Nothing was typed.");
+            return ExitStepFailed;
+        }
+    }
+    Thread.Sleep(300);
     InputSender.TypeText(viewerOptions.GotoCell);
     InputSender.PressChord("enter");
     Thread.Sleep(500);
@@ -601,4 +618,4 @@ static int CopySelection(ViewerOptions viewerOptions)
     }
 }
 
-internal sealed record ViewerOptions(string GotoKey, string GotoCell, string? CopyTo, bool Overwrite);
+internal sealed record ViewerOptions(string GotoKey, string GotoCell, string? CopyTo, bool Overwrite, bool SkipGotoCheck);
