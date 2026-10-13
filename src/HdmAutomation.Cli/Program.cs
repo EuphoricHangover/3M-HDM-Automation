@@ -32,6 +32,10 @@ const string Usage = """
       --build              click Build Now and carry on: wait for the report, click "Yes, now", then in the
                            Report Viewer click the sheet and select all (default: stop just before Build Now)
       --build-timeout <m>  minutes to wait for the report to finish building [30]
+      --goto-key <keys>    key combination that opens the Report Viewer's go-to-cell box [ctrl+g]
+      --goto-cell <cell>   cell to go to before selecting down to the end of the data [A1]
+      --copy-to <file>     after selecting, copy and save the table as this CSV file (may contain PHI!)
+      --overwrite          allow --copy-to to replace an existing file
       --place <x,y,w,h>    move and resize the window first, in screen pixels
       --tessdata <dir>     folder holding eng.traineddata [tessdata next to hdm.exe]
       --dump-dir <dir>     save each page's screenshot and OCR text there (may contain PHI!)
@@ -70,8 +74,8 @@ try
             }
         case "find-item":
             {
-                var valued = new HashSet<string>(common) { "item", "list-class", "max-pages", "notches", "next-title", "range", "edit-class", "build-timeout", "place", "tessdata", "dump-dir" };
-                var o = Options.Parse(rest, new HashSet<string> { "no-scroll", "no-jump", "click", "double-click", "build" }, valued);
+                var valued = new HashSet<string>(common) { "item", "list-class", "max-pages", "notches", "next-title", "range", "edit-class", "build-timeout", "goto-key", "goto-cell", "copy-to", "place", "tessdata", "dump-dir" };
+                var o = Options.Parse(rest, new HashSet<string> { "no-scroll", "no-jump", "click", "double-click", "build", "overwrite" }, valued);
                 return FindItem(o);
             }
         default:
@@ -175,6 +179,15 @@ static int FindItem(Options o)
     var item = o.Get("item", "TB-Urology Surgery Stats");
     var listClass = o.Get("list-class", "TEIXTreeView");
     var tessdata = o.Get("tessdata", Path.Combine(AppContext.BaseDirectory, "tessdata"));
+    var viewerOptions = new ViewerOptions(o.Get("goto-key", "ctrl+g"), o.Get("goto-cell", "A1"), o.Get("copy-to"), o.Has("overwrite"));
+
+    // Fail now, not after a long report build, if the output file can't be written.
+    if (viewerOptions.CopyTo is { } outPath)
+    {
+        var folder = Path.GetDirectoryName(Path.GetFullPath(outPath))!;
+        if (!Directory.Exists(folder)) throw new ArgumentException($"Folder for --copy-to does not exist: {folder}");
+        if (File.Exists(outPath) && !viewerOptions.Overwrite) throw new ArgumentException($"{outPath} already exists. Choose another name or add --overwrite.");
+    }
 
     // 1. Find the window. wfront.exe may have several open; the title picks the right one.
     var windows = WindowFinder.FindByTitle(processName, title);
@@ -269,7 +282,7 @@ static int FindItem(Options o)
 
         var dialog = WaitForNextWindow(window, nextTitle);
         if (dialog is null) return ExitNotFound;
-        return range is null ? ExitFound : FillAndBuild(dialog, item, range, o.Get("edit-class", "ButtonEdit"), o.Has("build"), o.GetInt("build-timeout", 30), ocr, options.DumpDirectory);
+        return range is null ? ExitFound : FillAndBuild(dialog, item, range, o.Get("edit-class", "ButtonEdit"), o.Has("build"), o.GetInt("build-timeout", 30), ocr, options.DumpDirectory, viewerOptions);
     }
     if (o.Has("click"))
     {
@@ -306,7 +319,7 @@ static WindowInfo? WaitForNextWindow(WindowInfo previous, string title)
     return null;
 }
 
-static int FillAndBuild(WindowInfo dialog, string item, string range, string editClass, bool build, int timeoutMinutes, TesseractOcr ocr, string? dumpDir)
+static int FillAndBuild(WindowInfo dialog, string item, string range, string editClass, bool build, int timeoutMinutes, TesseractOcr ocr, string? dumpDir, ViewerOptions viewerOptions)
 {
     if (!WindowController.BringToFront(WindowFinder.RootOf(dialog.Handle)))
     {
@@ -431,7 +444,7 @@ static int FillAndBuild(WindowInfo dialog, string item, string range, string edi
     var before = WindowFinder.TopLevelWindows().Select(w => w.Handle).ToHashSet();
     InputSender.Click(buttonAt.Value);
     Log("Clicked Build Now.");
-    return AfterBuild(dialog.ProcessName, before, timeoutMinutes, ocr, dumpDir);
+    return AfterBuild(dialog.ProcessName, before, timeoutMinutes, ocr, dumpDir, viewerOptions);
 }
 
 /// <summary>Where a control with the given caption is, read from its Windows caption or, failing that, off the screen.</summary>
@@ -459,7 +472,7 @@ static Point? LocateText(WindowInfo window, string text, TesseractOcr ocr)
     return new Point(b.X + b.Width / 2, b.Y + b.Height / 2);
 }
 
-static int AfterBuild(string processName, HashSet<IntPtr> before, int timeoutMinutes, TesseractOcr ocr, string? dumpDir)
+static int AfterBuild(string processName, HashSet<IntPtr> before, int timeoutMinutes, TesseractOcr ocr, string? dumpDir, ViewerOptions viewerOptions)
 {
     // 1. The report builds for as long as it takes; then a window with a "Yes, now" button appears.
     Log($"Waiting up to {timeoutMinutes} minute(s) for the report to finish (looking for the Report Complete window)");
@@ -526,11 +539,17 @@ static int AfterBuild(string processName, HashSet<IntPtr> before, int timeoutMin
         Log("Check failed: could not bring the Report Viewer to the front.");
         return ExitStepFailed;
     }
-    // Click inside the sheet so it has keyboard focus, then select everything. This does not copy.
+    // Click inside the sheet so it has keyboard focus. Ctrl+A doesn't select the data here, so go to the first
+    // cell and extend the selection to the end of the data instead.
     InputSender.Click(new Point(sheet.Bounds.X + sheet.Bounds.Width / 2, sheet.Bounds.Y + sheet.Bounds.Height / 2));
     Thread.Sleep(300);
-    InputSender.SelectAll();
-    Thread.Sleep(300);
+    InputSender.PressChord(viewerOptions.GotoKey);
+    Thread.Sleep(600);
+    InputSender.TypeText(viewerOptions.GotoCell);
+    InputSender.PressChord("enter");
+    Thread.Sleep(500);
+    InputSender.PressChord("ctrl+shift+end");
+    Thread.Sleep(500);
 
     if (dumpDir is not null)
     {
@@ -538,6 +557,48 @@ static int AfterBuild(string processName, HashSet<IntPtr> before, int timeoutMin
         using var shot = ScreenCapture.Capture(sheet.Bounds);
         shot.Save(Path.Combine(dumpDir, "sheet-selected.png"));
     }
-    Log("Selected everything in the sheet. Press Ctrl+C to copy it (the tool does not copy).");
-    return ExitFound;
+    Log($"Selected from {viewerOptions.GotoCell} to the end of the data.");
+
+    if (viewerOptions.CopyTo is null)
+    {
+        Log("Press Ctrl+C to copy it (the tool does not copy unless --copy-to is given).");
+        return ExitFound;
+    }
+    return CopySelection(viewerOptions);
 }
+
+static int CopySelection(ViewerOptions viewerOptions)
+{
+    // Empty the clipboard first so only freshly copied data can be read.
+    ClipboardText.Clear();
+    InputSender.PressChord("ctrl+c");
+    var text = ClipboardText.WaitForText(TimeSpan.FromSeconds(15));
+    if (text is null)
+    {
+        Log("Check failed: nothing arrived on the clipboard after Ctrl+C. The selection may not have worked.");
+        return ExitStepFailed;
+    }
+
+    try
+    {
+        var rows = TableText.ParseTabSeparated(text);
+        var columns = rows.Count == 0 ? 0 : rows.Max(r => r.Length);
+        var ragged = rows.Count(r => r.Length != columns);
+        Log($"Copied {rows.Count} row(s) by {columns} column(s).");
+        if (rows.Count == 0) return ExitStepFailed;
+        if (ragged > 0) Log($"WARNING: {ragged} row(s) have a different number of cells than the widest row.");
+
+        // UTF-8 with a byte order mark so Excel opens it with the right characters.
+        using var writer = new StreamWriter(viewerOptions.CopyTo!, append: false, new System.Text.UTF8Encoding(encoderShouldEmitUTF8Identifier: true));
+        TableText.WriteCsv(writer, rows);
+        Log($"Saved {viewerOptions.CopyTo}. It may contain patient data: store and delete it accordingly.");
+        return ExitFound;
+    }
+    finally
+    {
+        // The clipboard now holds report data; don't leave it lying around.
+        ClipboardText.Clear();
+    }
+}
+
+internal sealed record ViewerOptions(string GotoKey, string GotoCell, string? CopyTo, bool Overwrite);

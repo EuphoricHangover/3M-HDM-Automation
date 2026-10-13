@@ -33,7 +33,9 @@ hdm find-item --double-click --range 20260401-20260430
                                   # stops just before Build Now.
 hdm find-item --double-click --range 20260401-20260430 --build
                                   # ...and click Build Now, wait for Report Complete, click "Yes, now",
-                                  # then select all in the Report Viewer sheet (it does not copy)
+                                  # then select the sheet's data in the Report Viewer (it does not copy)
+hdm find-item --double-click --range 20260401-20260430 --build --copy-to out\urology.csv
+                                  # ...and copy the selection, save it as CSV, and clear the clipboard
 hdm find-item --dump-dir dump     # save what the OCR saw (screenshots + text) for troubleshooting
 ```
 

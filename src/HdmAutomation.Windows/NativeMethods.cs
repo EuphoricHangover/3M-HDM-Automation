@@ -42,6 +42,32 @@ internal static class NativeMethods
     [DllImport("user32.dll")]
     internal static extern IntPtr SendMessageTimeout(IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam, uint flags, uint timeoutMs, out IntPtr result);
 
+    internal const uint CfUnicodeText = 13;
+
+    [DllImport("user32.dll", SetLastError = true)]
+    internal static extern bool OpenClipboard(IntPtr newOwner);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    internal static extern bool CloseClipboard();
+
+    [DllImport("user32.dll", SetLastError = true)]
+    internal static extern bool EmptyClipboard();
+
+    [DllImport("user32.dll")]
+    internal static extern bool IsClipboardFormatAvailable(uint format);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    internal static extern IntPtr GetClipboardData(uint format);
+
+    [DllImport("user32.dll")]
+    internal static extern uint GetClipboardSequenceNumber();
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    internal static extern IntPtr GlobalLock(IntPtr handle);
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    internal static extern bool GlobalUnlock(IntPtr handle);
+
     internal const uint InputKeyboard = 1;
     internal const uint KeyUp = 0x0002;
 

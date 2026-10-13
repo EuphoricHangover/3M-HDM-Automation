@@ -52,6 +52,50 @@ public static class InputSender
         Thread.Sleep(30);
     }
 
+    private static readonly Dictionary<string, ushort> NamedKeys = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["enter"] = 0x0D,
+        ["tab"] = 0x09,
+        ["esc"] = 0x1B,
+        ["escape"] = 0x1B,
+        ["space"] = 0x20,
+        ["pgup"] = 0x21,
+        ["pgdn"] = 0x22,
+        ["end"] = 0x23,
+        ["home"] = 0x24,
+        ["left"] = 0x25,
+        ["up"] = 0x26,
+        ["right"] = 0x27,
+        ["down"] = 0x28,
+        ["delete"] = 0x2E,
+        ["backspace"] = 0x08,
+    };
+
+    /// <summary>Presses a key combination written like "ctrl+shift+end", "ctrl+g", "f5" or "enter".</summary>
+    public static void PressChord(string chord)
+    {
+        var modifiers = new List<ushort>();
+        ushort? key = null;
+        foreach (var part in chord.Split('+', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries))
+        {
+            switch (part.ToLowerInvariant())
+            {
+                case "ctrl" or "control": modifiers.Add(VkControl); break;
+                case "shift": modifiers.Add(VkShift); break;
+                case "alt": modifiers.Add(0x12); break;
+                default:
+                    if (key is not null) throw new ArgumentException($"Key combination '{chord}' has more than one non-modifier key.");
+                    if (NamedKeys.TryGetValue(part, out var named)) key = named;
+                    else if (part.Length >= 2 && part[0] is 'f' or 'F' && int.TryParse(part[1..], out var n) && n is >= 1 and <= 12) key = (ushort)(0x6F + n);
+                    else if (part.Length == 1 && NativeMethods.VkKeyScan(part[0]) != -1) key = (ushort)(NativeMethods.VkKeyScan(part[0]) & 0xFF);
+                    else throw new ArgumentException($"Unknown key '{part}' in '{chord}'.");
+                    break;
+            }
+        }
+        if (key is null) throw new ArgumentException($"Key combination '{chord}' has no key.");
+        PressVirtualKey(key.Value, modifiers.ToArray());
+    }
+
     /// <summary>Selects everything in the focused box (Ctrl+A), so typing replaces what was there.</summary>
     public static void SelectAll()
     {
