@@ -30,6 +30,7 @@ const string Usage = """
     inspect options
       --show-titles        also print window titles (they may contain patient names)
       --all                list every window and control with class and size, titles or not
+      --find-class <text>  search ALL programs for visible controls whose class contains this (e.g. TEIXTreeView)
 
     Exit codes: 0 found, 1 error, 2 not found, 3 ambiguous, 4 window not found
     """;
@@ -52,7 +53,8 @@ try
     {
         case "inspect":
             {
-                var o = Options.Parse(rest, new HashSet<string> { "show-titles", "all" }, common);
+                var o = Options.Parse(rest, new HashSet<string> { "show-titles", "all" }, new HashSet<string>(common) { "find-class" });
+                if (o.Get("find-class") is { } cls) return FindClass(cls);
                 return Inspect(o.Get("process", "wfront"), o.Get("title", "Current Summaries"), o.Has("show-titles"), o.Has("all"));
             }
         case "find-item":
@@ -76,6 +78,22 @@ catch (Exception ex)
     // Message only: stack traces and inner data could echo screen text.
     Console.Error.WriteLine($"Failed: {ex.Message}");
     return ExitError;
+}
+
+static int FindClass(string classContains)
+{
+    var hits = 0;
+    foreach (var w in WindowFinder.TopLevelWindows())
+    {
+        foreach (var c in WindowFinder.Children(w.Handle))
+        {
+            if (!c.Visible || !c.ClassName.Contains(classContains, StringComparison.OrdinalIgnoreCase)) continue;
+            hits++;
+            Log($"process '{w.ProcessName}'  top-level window {w.ClassName} {w.Bounds.Width}x{w.Bounds.Height} at ({w.Bounds.X},{w.Bounds.Y})  contains {c}");
+        }
+    }
+    Log(hits == 0 ? $"No visible control with class containing '{classContains}' in any program." : $"{hits} match(es).");
+    return hits == 0 ? ExitNoWindow : ExitFound;
 }
 
 static int Inspect(string process, string title, bool showTitles, bool all)
