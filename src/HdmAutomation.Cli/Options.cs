@@ -1,6 +1,5 @@
 namespace HdmAutomation.Cli;
 
-/// <summary>Minimal "--name value" / "--flag" parser. Unknown options are an error so typos don't go unnoticed.</summary>
 internal sealed class Options
 {
     private readonly Dictionary<string, string?> _values = new(StringComparer.OrdinalIgnoreCase);

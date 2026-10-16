@@ -2,7 +2,6 @@ using System.Reflection;
 
 namespace HdmAutomation.Engine;
 
-/// <summary>Finds every routine class (each .cs file that derives from <see cref="Routine"/>) in the given assemblies.</summary>
 public static class RoutineCatalog
 {
     public static IReadOnlyList<Routine> Discover(params Assembly[] assemblies) =>

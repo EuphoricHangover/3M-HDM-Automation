@@ -59,7 +59,6 @@ public class TextMatcherTests
     [Fact]
     public void Known_lookalike_name_makes_match_ambiguous()
     {
-        // OCR line is one edit away from both names; clicking would be a guess.
         var result = TextMatcher.FindBest("Urology Stats A", Lines("Urology Stats"),
             otherKnownNames: new[] { "Urology Stats B" });
 

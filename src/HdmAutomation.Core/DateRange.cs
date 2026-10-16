@@ -2,12 +2,10 @@ using System.Globalization;
 
 namespace HdmAutomation.Core;
 
-/// <summary>A report date range written as yyyyMMdd-yyyyMMdd, e.g. 20260401-20260430.</summary>
 public readonly record struct DateRange(DateOnly Start, DateOnly End)
 {
     public override string ToString() => $"{Start:yyyyMMdd}-{End:yyyyMMdd}";
 
-    /// <summary>Parses the text, rejecting impossible dates (20260431 is not a day) and ranges that end before they start.</summary>
     public static bool TryParse(string? text, out DateRange range, out string error)
     {
         range = default;
@@ -28,7 +26,6 @@ public readonly record struct DateRange(DateOnly Start, DateOnly End)
         return true;
     }
 
-    /// <summary>The whole previous calendar month relative to <paramref name="today"/>.</summary>
     public static DateRange PreviousMonth(DateOnly today)
     {
         var firstOfThisMonth = new DateOnly(today.Year, today.Month, 1);

@@ -5,30 +5,22 @@ namespace HdmAutomation.Windows;
 
 public sealed record ListSearchOptions
 {
-    /// <summary>Scroll the list with the mouse wheel to look beyond the rows currently visible.</summary>
     public bool Scroll { get; init; } = true;
 
-    /// <summary>
-    /// Click in the list and press the target's first letter, which makes the list jump to the first entry starting
-    /// with it (much faster than scrolling). If the item still isn't found, falls back to scrolling from the top.
-    /// </summary>
     public bool JumpToFirstLetter { get; init; } = true;
 
     public int MaxPages { get; init; } = 40;
 
-    /// <summary>Wheel notches per page. Keep it smaller than the number of visible rows / 3 so pages overlap.</summary>
     public int NotchesPerPage { get; init; } = 3;
 
     public double MaxErrorRatio { get; init; } = 0.12;
     public IReadOnlyList<string> OtherKnownNames { get; init; } = Array.Empty<string>();
 
-    /// <summary>If set, each page's screenshot and OCR text is saved here. Contains screen text, so possibly PHI.</summary>
     public string? DumpDirectory { get; init; }
 }
 
 public sealed record ListSearchResult(MatchResult Match, int PagesRead, IReadOnlyList<string> Warnings);
 
-/// <summary>Reads a list's visible rows with OCR, scrolling page by page, until a wanted name is found.</summary>
 public static class ListSearch
 {
     public static ListSearchResult Find(TesseractOcr ocr, Rectangle listArea, string target, ListSearchOptions options, Action<string> log, CancellationToken cancel = default)
@@ -37,7 +29,6 @@ public static class ListSearch
         var center = new Point(listArea.X + listArea.Width / 2, listArea.Y + listArea.Height / 2);
         var pagesRead = 0;
 
-        // Always start from the top so every run begins in the same state, whether or not it then jumps.
         if (options.Scroll) ScrollToTop(center, log);
 
         var first = target.FirstOrDefault(char.IsLetterOrDigit);
@@ -49,7 +40,6 @@ public static class ListSearch
             InputSender.PressKey(first);
             Thread.Sleep(400);
 
-            // Scrolling down from where the jump landed is enough; the target sorts after its first letter.
             var jumped = ReadPages(ocr, listArea, target, options, log, warnings, ref pagesRead, 5, cancel);
             if (jumped.Status != MatchStatus.NotFound || !options.Scroll)
                 return new ListSearchResult(jumped, pagesRead, warnings);
@@ -73,7 +63,6 @@ public static class ListSearch
         Thread.Sleep(200);
     }
 
-    /// <summary>Reads the visible page, then scrolls down page by page, until the target is found or the list ends.</summary>
     private static MatchResult ReadPages(
         TesseractOcr ocr, Rectangle listArea, string target, ListSearchOptions options,
         Action<string> log, List<string> warnings, ref int pagesRead, int maxPages, CancellationToken cancel)

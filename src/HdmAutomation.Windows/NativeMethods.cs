@@ -13,7 +13,6 @@ internal static class NativeMethods
         public int Left, Top, Right, Bottom;
     }
 
-    // Windows' INPUT is a tagged union: the mouse and keyboard variants share the same bytes.
     [StructLayout(LayoutKind.Explicit)]
     internal struct INPUT
     {

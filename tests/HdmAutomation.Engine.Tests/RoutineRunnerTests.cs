@@ -64,7 +64,7 @@ public sealed class RoutineRunnerTests : IDisposable
         var second = Runner().Run(routine, Parameters(), state.NextStepIndex(), CancellationToken.None);
 
         Assert.Equal(RunOutcome.Completed, second.Outcome);
-        Assert.Equal(new[] { "two", "three" }, routine.Ran); // step one was not repeated
+        Assert.Equal(new[] { "two", "three" }, routine.Ran);
         Assert.Equal(3, Runner().LoadState(routine, "20260401-20260430")!.Steps.Count(s => s.Status == StepStatus.Done));
     }
 

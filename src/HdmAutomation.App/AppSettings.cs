@@ -2,7 +2,6 @@ using System.Text.Json;
 
 namespace HdmAutomation.App;
 
-/// <summary>Small per-user preferences, kept in %LocalAppData%\HdmAutomation\settings.json.</summary>
 internal sealed class AppSettings
 {
     public string? OutputFolder { get; set; }
@@ -17,7 +16,7 @@ internal sealed class AppSettings
     public static AppSettings Load()
     {
         try { return JsonSerializer.Deserialize<AppSettings>(File.ReadAllText(FilePath)) ?? new AppSettings(); }
-        catch (Exception) { return new AppSettings(); } // missing or damaged: start with defaults
+        catch (Exception) { return new AppSettings(); }
     }
 
     public void Save()
@@ -27,6 +26,6 @@ internal sealed class AppSettings
             Directory.CreateDirectory(DataFolder);
             File.WriteAllText(FilePath, JsonSerializer.Serialize(this, new JsonSerializerOptions { WriteIndented = true }));
         }
-        catch (Exception) { /* preferences are a convenience; never fail a run over them */ }
+        catch (Exception) {  }
     }
 }

@@ -18,5 +18,4 @@
     <ProjectReference Include="..\..\src\HdmAutomation.Engine\HdmAutomation.Engine.csproj" />
     <ProjectReference Include="..\..\src\HdmAutomation.Routines\HdmAutomation.Routines.csproj" />
   </ItemGroup>
-
 </Project>

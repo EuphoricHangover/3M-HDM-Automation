@@ -13,8 +13,8 @@ public class DateRangeTests
     }
 
     [Theory]
-    [InlineData("20260401-20260431")] // April has 30 days
-    [InlineData("20260430-20260401")] // ends before it starts
+    [InlineData("20260401-20260431")]
+    [InlineData("20260430-20260401")]
     [InlineData("2026-04-01")]
     [InlineData("202604-202605")]
     [InlineData("")]
@@ -28,7 +28,7 @@ public class DateRangeTests
     [Theory]
     [InlineData(2026, 5, 14, "20260401-20260430")]
     [InlineData(2026, 1, 2, "20251201-20251231")]
-    [InlineData(2024, 3, 31, "20240201-20240229")] // leap year
+    [InlineData(2024, 3, 31, "20240201-20240229")]
     public void Previous_month(int y, int m, int d, string expected)
     {
         Assert.Equal(expected, DateRange.PreviousMonth(new DateOnly(y, m, d)).ToString());

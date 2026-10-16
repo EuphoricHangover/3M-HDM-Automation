@@ -3,7 +3,6 @@ using HdmAutomation.Windows;
 
 namespace HdmAutomation.Engine;
 
-/// <summary>A list the program draws itself, so its items are read off the screen with OCR.</summary>
 public sealed class UiList
 {
     private readonly UiWindow _window;
@@ -15,10 +14,8 @@ public sealed class UiList
         _control = control;
     }
 
-    /// <summary>Scrolls to the top, jumps near the item by its first letter, finds it by reading the screen, and clicks it.</summary>
     public void Select(string item) => Act(item, doubleClick: false);
 
-    /// <summary>Like <see cref="Select"/> but double-clicks, which usually opens the item.</summary>
     public void Open(string item) => Act(item, doubleClick: true);
 
     private void Act(string item, bool doubleClick)

@@ -11,10 +11,6 @@ public sealed class StepState
     public string? Message { get; set; }
 }
 
-/// <summary>
-/// Progress of one routine for one date range, saved after every step so a failed run can restart where it stopped.
-/// Holds step names and results only, never screen content.
-/// </summary>
 public sealed class RunState
 {
     public string Routine { get; set; } = string.Empty;
@@ -23,7 +19,6 @@ public sealed class RunState
     public DateTime UpdatedAt { get; set; }
     public List<StepState> Steps { get; set; } = new();
 
-    /// <summary>Index of the first step that is not done, or Steps.Count when everything finished.</summary>
     public int NextStepIndex()
     {
         var i = Steps.FindIndex(s => s.Status != StepStatus.Done);
@@ -42,7 +37,7 @@ public sealed class RunState
     {
         if (!File.Exists(path)) return null;
         try { return JsonSerializer.Deserialize<RunState>(File.ReadAllText(path)); }
-        catch (JsonException) { return null; } // a damaged state file just means "start over"
+        catch (JsonException) { return null; }
     }
 
     public void Save(string path)
@@ -51,6 +46,6 @@ public sealed class RunState
         Directory.CreateDirectory(Path.GetDirectoryName(path)!);
         var temp = path + ".tmp";
         File.WriteAllText(temp, JsonSerializer.Serialize(this, Json));
-        File.Move(temp, path, overwrite: true); // never leave a half-written state file
+        File.Move(temp, path, overwrite: true);
     }
 }

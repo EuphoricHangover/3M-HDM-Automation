@@ -12,6 +12,4 @@
   <ItemGroup>
     <ProjectReference Include="..\HdmAutomation.Windows\HdmAutomation.Windows.csproj" />
   </ItemGroup>
-
-
 </Project>

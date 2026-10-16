@@ -6,7 +6,6 @@ public enum RunOutcome { Completed, Failed, Cancelled }
 
 public sealed record RunResult(RunOutcome Outcome, string Message);
 
-/// <summary>Runs a routine's steps in order, saving progress after each so a failed run can restart at any step.</summary>
 public sealed class RoutineRunner
 {
     private readonly string _tessdataFolder;
@@ -23,7 +22,6 @@ public sealed class RoutineRunner
     public RunState? LoadState(Routine routine, string dateRange) =>
         RunState.Load(RunState.PathFor(_stateFolder, routine.Name, dateRange));
 
-    /// <summary>Runs the routine from <paramref name="startStep"/> (0 = the beginning) to the end.</summary>
     public RunResult Run(Routine routine, RunParameters parameters, int startStep, CancellationToken cancel)
     {
         var steps = routine.GetSteps();
@@ -36,7 +34,6 @@ public sealed class RoutineRunner
             state = new RunState { Routine = routine.Name, DateRange = parameters.DateRange };
             state.Steps.AddRange(steps.Select(s => new StepState { Name = s.Name, Status = StepStatus.Pending }));
         }
-        // Steps from the chosen one onwards run again; the ones before it keep their saved result.
         for (var i = startStep; i < steps.Count; i++) state.Steps[i].Status = StepStatus.Pending;
 
         using var ocr = new LazyOcr(_tessdataFolder);
@@ -67,7 +64,6 @@ public sealed class RoutineRunner
                 }
                 catch (Exception ex)
                 {
-                    // Message only: stack traces and inner data could echo screen text.
                     state.Steps[i].Status = StepStatus.Failed;
                     state.Steps[i].Message = ex.Message;
                     state.Save(statePath);
@@ -83,13 +79,12 @@ public sealed class RoutineRunner
         }
         catch (OperationCanceledException)
         {
-            state.Save(statePath); // the interrupted step stays "Running", which counts as not done
+            state.Save(statePath);
             _log("Stopped.");
             return new RunResult(RunOutcome.Cancelled, "Stopped before finishing. You can restart from the step that was running.");
         }
     }
 
-    /// <summary>Finds which program the routine's start window belongs to and remembers it for later steps and restarts.</summary>
     private static void DetectProgram(Routine routine, RoutineContext context, RunState state)
     {
         try
@@ -103,11 +98,9 @@ public sealed class RoutineRunner
         }
         catch (Exception)
         {
-            // Best effort: when resuming at a later step the start window may be gone, and the steps report what they need.
         }
     }
 
-    /// <summary>Creates the OCR engine only when a step first needs it, and disposes it at the end of the run.</summary>
     private sealed class LazyOcr : IDisposable
     {
         private readonly string _folder;

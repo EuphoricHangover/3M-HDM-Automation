@@ -4,10 +4,6 @@ using HdmAutomation.Windows;
 
 namespace HdmAutomation.Engine;
 
-/// <summary>
-/// What a step uses to look at and operate the program: find windows, then work with the lists, boxes and
-/// buttons inside them. Every call fails with a clear <see cref="StepFailedException"/> instead of guessing.
-/// </summary>
 public sealed class UiToolkit
 {
     private readonly RoutineContext _context;
@@ -22,8 +18,6 @@ public sealed class UiToolkit
     internal RoutineContext Context => _context;
     internal TesseractOcr Ocr => _ocr.Value;
 
-    /// <summary>Finds the one visible window whose title contains the text, waiting for it to appear. Fails if there are none or several.</summary>
-    /// <param name="className">Also require this window class, to tell apart windows with similar titles.</param>
     public UiWindow Window(string titleContains, string? className = null, int waitSeconds = 10)
     {
         var deadline = DateTime.UtcNow.AddSeconds(waitSeconds);
@@ -44,14 +38,12 @@ public sealed class UiToolkit
         }
     }
 
-    /// <summary>Like <see cref="Window"/> but returns null instead of failing when there is no such window.</summary>
     public UiWindow? TryWindow(string titleContains, string? className = null)
     {
         var matches = Find(titleContains, className);
         return matches.Count == 1 ? new UiWindow(this, matches[0]) : null;
     }
 
-    /// <summary>Fails if a window with this title is open. Use it to refuse to start with a leftover window around.</summary>
     public void RequireNoWindow(string titleContains)
     {
         if (Find(titleContains, null).Count > 0)
@@ -60,10 +52,6 @@ public sealed class UiToolkit
         }
     }
 
-    /// <summary>
-    /// Waits for a button or label with this text to appear in any window of the program, then clicks it. For jobs
-    /// that take a long time, like a report building.
-    /// </summary>
     public void WaitAndClick(string text, int timeoutMinutes)
     {
         var process = _context.ProcessName ?? throw new StepFailedException(
@@ -75,7 +63,6 @@ public sealed class UiToolkit
         while (DateTime.UtcNow < deadline)
         {
             _context.ThrowIfCancelled();
-            // Any window may be the one: a progress window can turn into the finished window in place.
             foreach (var window in WindowFinder.TopLevelWindows(process))
             {
                 var at = new UiWindow(this, window).TryLocate(text);

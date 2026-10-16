@@ -6,15 +6,12 @@ using Tesseract;
 
 namespace HdmAutomation.Windows;
 
-/// <summary>Reads lines of text from a screenshot using Tesseract (free, open source, runs fully offline).</summary>
 public sealed class TesseractOcr : IDisposable
 {
-    // Tesseract reads small UI text much better when it is enlarged first.
     private const int Scale = 3;
 
     private readonly TesseractEngine _engine;
 
-    /// <param name="tessdataDirectory">Folder containing eng.traineddata (see tools/Get-Tessdata.ps1).</param>
     public TesseractOcr(string tessdataDirectory, string language = "eng")
     {
         var modelFile = Path.Combine(tessdataDirectory, language + ".traineddata");
@@ -25,13 +22,9 @@ public sealed class TesseractOcr : IDisposable
         }
 
         _engine = new TesseractEngine(tessdataDirectory, language, EngineMode.LstmOnly);
-        _engine.SetVariable("user_defined_dpi", "300"); // pixel size is known from Scale; silences the "no DPI" warning
+        _engine.SetVariable("user_defined_dpi", "300");
     }
 
-    /// <summary>
-    /// Reads every text line in <paramref name="image"/>. Returned bounds are screen pixels:
-    /// <paramref name="imageOrigin"/> is where the image's top-left corner sits on screen.
-    /// </summary>
     public IReadOnlyList<OcrLine> ReadLines(Bitmap image, Point imageOrigin)
     {
         using var prepared = Prepare(image);
@@ -61,7 +54,6 @@ public sealed class TesseractOcr : IDisposable
         return lines;
     }
 
-    /// <summary>Enlarges, converts to greyscale, and flips light-on-dark text to dark-on-light (what Tesseract expects).</summary>
     private static Bitmap Prepare(Bitmap source)
     {
         var invert = AverageBrightness(source) < 128;

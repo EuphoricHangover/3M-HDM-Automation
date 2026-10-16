@@ -2,7 +2,6 @@ using System.Drawing;
 
 namespace HdmAutomation.Core;
 
-/// <summary>One line of text read from the screen, with its position in screen pixels.</summary>
 public sealed record OcrLine(string Text, Rectangle Bounds, float Confidence);
 
 public enum MatchStatus
@@ -10,19 +9,13 @@ public enum MatchStatus
     Found,
     NotFound,
 
-    /// <summary>Two lines (or a different known name) fit equally well, so clicking either would be a guess.</summary>
     Ambiguous,
 }
 
 public sealed record MatchResult(MatchStatus Status, OcrLine? Line, int Distance, string Detail);
 
-/// <summary>
-/// Finds a wanted name among OCR lines. OCR gets a letter or two wrong, so matching tolerates small
-/// errors, but never lets one report name match a different one (e.g. "Summary 2025" vs "Summary 2026").
-/// </summary>
 public static class TextMatcher
 {
-    /// <summary>Lowercase letters and digits only, so OCR noise in punctuation and spacing ("TB—Urology") doesn't matter.</summary>
     public static string Normalize(string text)
     {
         var chars = new List<char>(text.Length);
@@ -33,10 +26,6 @@ public static class TextMatcher
         return new string(chars.ToArray());
     }
 
-    /// <summary>
-    /// Smallest number of edits needed to turn <paramref name="pattern"/> into some substring of
-    /// <paramref name="text"/> (Sellers' approximate substring matching). 0 means the pattern appears exactly.
-    /// </summary>
     public static int ApproximateContainsDistance(string pattern, string text)
     {
         if (pattern.Length == 0) return 0;
@@ -48,7 +37,7 @@ public static class TextMatcher
         var best = previous[pattern.Length];
         foreach (var t in text)
         {
-            current[0] = 0; // a match may start anywhere in the text
+            current[0] = 0;
             for (var i = 1; i <= pattern.Length; i++)
             {
                 var cost = pattern[i - 1] == t ? 0 : 1;
@@ -60,14 +49,6 @@ public static class TextMatcher
         return best;
     }
 
-    /// <summary>
-    /// Finds the line that best matches <paramref name="target"/>.
-    /// </summary>
-    /// <param name="maxErrorRatio">Allowed edits as a share of the target's length (0.12 allows 2 edits in a 20-character name).</param>
-    /// <param name="otherKnownNames">
-    /// Other names that exist in the same list. A line that fits one of these as well as the target is reported
-    /// as ambiguous instead of found.
-    /// </param>
     public static MatchResult FindBest(
         string target,
         IReadOnlyList<OcrLine> lines,
@@ -91,7 +72,6 @@ public static class TextMatcher
             var text = Normalize(line.Text);
             if (text.Length == 0) continue;
 
-            // Digits identify the report ("2025" vs "2026"): they must be read exactly, never "close enough".
             if (wantedDigits.Length > 0 && !DigitsOf(text).Contains(wantedDigits, StringComparison.Ordinal)) continue;
 
             var distance = ApproximateContainsDistance(wanted, text);

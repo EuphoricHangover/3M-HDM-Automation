@@ -2,7 +2,6 @@ using HdmAutomation.Engine;
 
 namespace HdmAutomation.Routines;
 
-/// <summary>Builds the "TB-Urology Surgery Stats" summary for the date range and exports the sheet as CSV.</summary>
 public sealed class UrologySurgeryStats : Routine
 {
     private const string Report = "TB-Urology Surgery Stats";
@@ -15,7 +14,7 @@ public sealed class UrologySurgeryStats : Routine
     {
         steps.Add("Open the report", c =>
         {
-            c.Ui.RequireNoWindow("Report Viewer"); // a leftover viewer would be mistaken for the new one
+            c.Ui.RequireNoWindow("Report Viewer");
             var summaries = c.Ui.Window("Current Summaries");
             summaries.BringToFront();
             summaries.List("TEIXTreeView").Open(Report);
@@ -24,7 +23,7 @@ public sealed class UrologySurgeryStats : Routine
         steps.Add("Set the search range", c =>
         {
             var properties = c.Ui.Window("Properties for Summary");
-            properties.RequireText(Report); // make sure it is the report we meant to open
+            properties.RequireText(Report);
             properties.Edit("ButtonEdit").SetText(c.Parameters.DateRange);
         });
 

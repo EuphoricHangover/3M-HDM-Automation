@@ -45,7 +45,6 @@ catch (ArgumentException ex)
 }
 catch (Exception ex)
 {
-    // Message only: stack traces could echo screen text.
     Console.Error.WriteLine($"Failed: {ex.Message}");
     return ExitError;
 }
@@ -115,7 +114,6 @@ static int Inspect(string process, string title, bool showTitles, bool all)
         {
             var childMatch = c.Visible && c.Title.Contains(title, StringComparison.OrdinalIgnoreCase);
             found |= childMatch;
-            // Child controls: always show those with a title match or a recognisable list class; the rest only with --show-titles.
             if (all || childMatch || showTitles || c.ClassName.Contains("TreeView", StringComparison.OrdinalIgnoreCase))
             {
                 Log($"      child {c}{(c.Visible ? "" : "  [hidden]")}{(childMatch ? "  <- title matches" : "")}{(showTitles ? $"  \"{c.Title}\"" : "")}");

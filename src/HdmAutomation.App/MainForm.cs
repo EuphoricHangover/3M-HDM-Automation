@@ -108,8 +108,6 @@ internal sealed class MainForm : Form
         Controls.Add(grid);
     }
 
-    // ---- life cycle -------------------------------------------------------------------------------------------
-
     protected override void OnHandleCreated(EventArgs e)
     {
         base.OnHandleCreated(e);
@@ -153,11 +151,8 @@ internal sealed class MainForm : Form
         base.OnFormClosing(e);
     }
 
-    // ---- choosing what to run -----------------------------------------------------------------------------------
-
     private Routine? Selected => _routineBox.SelectedIndex >= 0 ? _routines[_routineBox.SelectedIndex] : null;
 
-    /// <summary>Selects the routine whose start window is on screen right now.</summary>
     private void DetectRoutine()
     {
         var found = new List<Routine>();
@@ -181,7 +176,6 @@ internal sealed class MainForm : Form
         }
     }
 
-    /// <summary>Lists the steps and starts at the first one not finished for this routine and date range.</summary>
     private void RefreshSteps()
     {
         _stepBox.Items.Clear();
@@ -198,8 +192,6 @@ internal sealed class MainForm : Form
         }
         _stepBox.SelectedIndex = next;
     }
-
-    // ---- running --------------------------------------------------------------------------------------------------
 
     private void BeginCountdown()
     {
@@ -261,7 +253,6 @@ internal sealed class MainForm : Form
         _status.Text = $"Running '{routine.Name}'...  (Ctrl+Alt+X stops it)";
         Log($"Starting '{routine.Name}' for {parameters.DateRange} at step {startStep + 1}");
 
-        // Get out of the way: the routine reads and clicks the other program's windows.
         WindowState = FormWindowState.Minimized;
 
         RunResult result;

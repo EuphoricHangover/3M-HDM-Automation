@@ -3,7 +3,6 @@ using System.Drawing;
 
 namespace HdmAutomation.Windows;
 
-/// <summary>Finds top-level windows and child controls using plain Win32 calls.</summary>
 public static class WindowFinder
 {
     public static IReadOnlyList<WindowInfo> TopLevelWindows(string? processName = null, bool includeHidden = false)
@@ -25,7 +24,6 @@ public static class WindowFinder
         return result;
     }
 
-    /// <summary>All descendant controls of <paramref name="parent"/>, including hidden ones.</summary>
     public static IReadOnlyList<WindowInfo> Children(IntPtr parent)
     {
         var processNames = new Dictionary<int, string>();
@@ -38,11 +36,6 @@ public static class WindowFinder
         return result;
     }
 
-    /// <summary>
-    /// Visible windows of a process whose title contains the given text (case-insensitive). Looks at top-level
-    /// windows first; older programs often keep their "windows" inside one main window (MDI), so if none match,
-    /// the controls inside each top-level window are searched too.
-    /// </summary>
     public static IReadOnlyList<WindowInfo> FindByTitle(string processName, string titleContains)
     {
         bool Matches(WindowInfo w) =>
@@ -55,10 +48,6 @@ public static class WindowFinder
         return topLevel.SelectMany(w => Children(w.Handle)).Where(Matches).ToList();
     }
 
-    /// <summary>
-    /// The window under the mouse pointer and each of its parents up to the top-level window.
-    /// Empty if the point has no window of its own.
-    /// </summary>
     public static IReadOnlyList<WindowInfo> ChainAtCursor(out Point cursor)
     {
         NativeMethods.GetCursorPos(out var pt);
@@ -75,24 +64,16 @@ public static class WindowFinder
         return chain;
     }
 
-    /// <summary>Re-reads a window's current position, size and visibility.</summary>
     public static WindowInfo Refresh(WindowInfo window) => Describe(window.Handle, new Dictionary<int, string>());
 
-    /// <summary>True while the window handle still refers to an existing window.</summary>
     public static bool Exists(WindowInfo window) => NativeMethods.IsWindow(window.Handle);
 
-    /// <summary>The top-level window that contains <paramref name="handle"/> (or the window itself if it is top-level).</summary>
     public static IntPtr RootOf(IntPtr handle)
     {
         var root = NativeMethods.GetAncestor(handle, NativeMethods.GaRoot);
         return root == IntPtr.Zero ? handle : root;
     }
 
-    /// <summary>
-    /// Finds the largest visible control whose class name contains <paramref name="classContains"/>. Looks inside
-    /// <paramref name="window"/> first, then in the process's other top-level windows (drop-down lists are often
-    /// separate pop-up windows rather than children).
-    /// </summary>
     public static WindowInfo? FindControlByClass(WindowInfo window, string classContains)
     {
         bool Matches(WindowInfo w) =>
@@ -112,10 +93,6 @@ public static class WindowFinder
         return null;
     }
 
-    /// <summary>
-    /// A control's current text (an edit box's contents, a button's caption), asked of the control itself with
-    /// WM_GETTEXT, which works across programs where GetWindowText does not.
-    /// </summary>
     public static string TextOf(IntPtr handle)
     {
         const uint timeoutMs = 1000;
@@ -134,7 +111,7 @@ public static class WindowFinder
 
     private static string? NormalizeProcessName(string? name)
     {
-        if (string.IsNullOrWhiteSpace(name) || name is "any" or "*") return null; // null = every program
+        if (string.IsNullOrWhiteSpace(name) || name is "any" or "*") return null;
         return name.EndsWith(".exe", StringComparison.OrdinalIgnoreCase) ? name[..^4] : name;
     }
 
@@ -149,7 +126,7 @@ public static class WindowFinder
         if (!processNames.TryGetValue((int)pid, out var processName))
         {
             try { processName = Process.GetProcessById((int)pid).ProcessName; }
-            catch (Exception) { processName = "?"; } // process ended, or access denied
+            catch (Exception) { processName = "?"; }
             processNames[(int)pid] = processName;
         }
 

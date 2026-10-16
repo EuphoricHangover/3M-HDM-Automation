@@ -17,8 +17,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <!-- OCR language data: put eng.traineddata in the repo's tessdata folder (tools/Get-Tessdata.ps1); it is copied next to the program. -->
     <None Include="..\..\tessdata\*.traineddata" Link="tessdata\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
-
 </Project>

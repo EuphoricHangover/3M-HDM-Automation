@@ -2,13 +2,8 @@ using System.Text;
 
 namespace HdmAutomation.Core;
 
-/// <summary>Converts between spreadsheet clipboard text (tab-separated) and CSV.</summary>
 public static class TableText
 {
-    /// <summary>
-    /// Parses text copied from a spreadsheet: tabs between cells, line breaks between rows. Cells containing
-    /// tabs, line breaks or quotes arrive wrapped in double quotes (with inner quotes doubled), as Excel does.
-    /// </summary>
     public static List<string[]> ParseTabSeparated(string text)
     {
         var rows = new List<string[]>();
@@ -24,7 +19,6 @@ public static class TableText
             var c = text[i];
             if (c == '"' && cell.Length == 0)
             {
-                // Quoted cell: runs to the closing quote; "" inside means a literal quote.
                 i++;
                 while (i < text.Length)
                 {
@@ -46,12 +40,10 @@ public static class TableText
             else { cell.Append(c); i++; }
         }
 
-        // Text normally ends with a line break; only a last row with content still needs closing.
         if (cell.Length > 0 || row.Count > 0) EndRow();
         return rows;
     }
 
-    /// <summary>Writes rows as RFC 4180 CSV (quotes only where needed, CRLF between rows).</summary>
     public static void WriteCsv(TextWriter writer, IEnumerable<string[]> rows)
     {
         foreach (var row in rows)

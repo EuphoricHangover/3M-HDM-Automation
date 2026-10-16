@@ -3,7 +3,6 @@ using System.Runtime.InteropServices;
 
 namespace HdmAutomation.Windows;
 
-/// <summary>Sends real mouse input, as if a person did it. Coordinates are screen pixels.</summary>
 public static class InputSender
 {
     public static void Click(Point screenPoint)
@@ -17,19 +16,16 @@ public static class InputSender
     {
         MoveTo(screenPoint);
         Thread.Sleep(50);
-        // Two clicks in one batch land well inside the system's double-click time.
         Send(Mouse(NativeMethods.MouseLeftDown), Mouse(NativeMethods.MouseLeftUp),
             Mouse(NativeMethods.MouseLeftDown), Mouse(NativeMethods.MouseLeftUp));
     }
 
-    /// <summary>Scrolls the wheel over a point. Positive notches scroll up (towards the top of a list).</summary>
     public static void Wheel(Point screenPoint, int notches)
     {
         MoveTo(screenPoint);
         Send(Mouse(NativeMethods.MouseWheel, notches * 120));
     }
 
-    /// <summary>Presses and releases the key that types <paramref name="ch"/> (shift state is ignored; list type-ahead is not case-sensitive).</summary>
     public static void PressKey(char ch)
     {
         var scan = NativeMethods.VkKeyScan(ch);
@@ -43,7 +39,6 @@ public static class InputSender
 
     public const ushort VkBack = 0x08, VkEnd = 0x23, VkHome = 0x24, VkDelete = 0x2E, VkShift = 0x10, VkControl = 0x11;
 
-    /// <summary>Presses a key by virtual-key code, holding the given modifier keys (e.g. Shift) while it is pressed.</summary>
     public static void PressVirtualKey(ushort vk, params ushort[] modifiers)
     {
         foreach (var m in modifiers) Send(Key(m, false));
@@ -71,7 +66,6 @@ public static class InputSender
         ["backspace"] = 0x08,
     };
 
-    /// <summary>Presses a key combination written like "ctrl+shift+end", "ctrl+g", "f5" or "enter".</summary>
     public static void PressChord(string chord)
     {
         var modifiers = new List<ushort>();
@@ -96,7 +90,6 @@ public static class InputSender
         PressVirtualKey(key.Value, modifiers.ToArray());
     }
 
-    /// <summary>Selects everything in the focused box (Ctrl+A), so typing replaces what was there.</summary>
     public static void SelectAll()
     {
         const ushort control = 0x11;
@@ -104,7 +97,6 @@ public static class InputSender
         Send(Key(control, false), Key(a, false), Key(a, true), Key(control, true));
     }
 
-    /// <summary>Types text one key at a time, as a person would.</summary>
     public static void TypeText(string text)
     {
         const ushort shift = 0x10;
@@ -135,7 +127,6 @@ public static class InputSender
         var width = NativeMethods.GetSystemMetrics(NativeMethods.SmCxVirtualScreen);
         var height = NativeMethods.GetSystemMetrics(NativeMethods.SmCyVirtualScreen);
 
-        // Absolute mouse coordinates are 0..65535 across the whole virtual desktop (all monitors).
         var x = (int)Math.Round((p.X - left) * 65535.0 / Math.Max(1, width - 1));
         var y = (int)Math.Round((p.Y - top) * 65535.0 / Math.Max(1, height - 1));
         Send(new NativeMethods.INPUT

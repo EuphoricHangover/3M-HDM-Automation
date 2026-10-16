@@ -10,5 +10,4 @@
     <ProjectReference Include="..\HdmAutomation.Core\HdmAutomation.Core.csproj" />
     <ProjectReference Include="..\HdmAutomation.Windows\HdmAutomation.Windows.csproj" />
   </ItemGroup>
-
 </Project>

@@ -4,7 +4,6 @@ using HdmAutomation.Windows;
 
 namespace HdmAutomation.Engine;
 
-/// <summary>A window on screen. Get one from <see cref="UiToolkit.Window"/>.</summary>
 public sealed class UiWindow
 {
     private readonly UiToolkit _ui;
@@ -20,7 +19,6 @@ public sealed class UiWindow
     internal UiToolkit Ui => _ui;
     internal IntPtr Handle => _info.Handle;
 
-    /// <summary>The window's current position and size, in screen pixels.</summary>
     internal Rectangle Bounds => Current().Bounds;
 
     private WindowInfo Current()
@@ -29,7 +27,6 @@ public sealed class UiWindow
         return _info = WindowFinder.Refresh(_info);
     }
 
-    /// <summary>Brings the window in front of everything else. Screen reading only works on what is visible.</summary>
     public UiWindow BringToFront()
     {
         _ui.Context.ThrowIfCancelled();
@@ -40,14 +37,12 @@ public sealed class UiWindow
         return this;
     }
 
-    /// <summary>Moves and resizes the window (screen pixels), so clicks and screen reading land in the same place every run.</summary>
     public UiWindow Place(int x, int y, int width, int height)
     {
         WindowController.Place(Current().Handle, new Rectangle(x, y, width, height));
         return this;
     }
 
-    /// <summary>The list control inside this window, e.g. <c>List("TEIXTreeView")</c>.</summary>
     public UiList List(string classContains = "TEIXTreeView")
     {
         var control = WindowFinder.FindControlByClass(Current(), classContains)
@@ -55,7 +50,6 @@ public sealed class UiWindow
         return new UiList(this, control);
     }
 
-    /// <summary>The single text box of this class in the window. Fails if there is not exactly one.</summary>
     public UiEdit Edit(string classContains)
     {
         var edits = WindowFinder.Children(Current().Handle)
@@ -68,7 +62,6 @@ public sealed class UiWindow
         return new UiEdit(this, edits[0]);
     }
 
-    /// <summary>The spreadsheet-style pane of this class (a report viewer's sheet).</summary>
     public UiSheet Sheet(string classContains = "AfxOleControl42")
     {
         var control = WindowFinder.FindControlByClass(Current(), classContains)
@@ -76,7 +69,6 @@ public sealed class UiWindow
         return new UiSheet(this, control);
     }
 
-    /// <summary>Clicks the button (or label) showing this text. Reads its Windows caption, or the screen if it has none.</summary>
     public void Click(string text)
     {
         BringToFront();
@@ -84,7 +76,6 @@ public sealed class UiWindow
         InputSender.Click(at);
     }
 
-    /// <summary>Fails unless this text is visible in the window. Use it to confirm you are in the right place before acting.</summary>
     public void RequireText(string text)
     {
         BringToFront();
@@ -97,7 +88,6 @@ public sealed class UiWindow
         }
     }
 
-    /// <summary>Where the text is on screen (centre point), from a control caption or from reading the window; null if absent.</summary>
     internal Point? TryLocate(string text)
     {
         if (!WindowFinder.Exists(_info)) return null;
