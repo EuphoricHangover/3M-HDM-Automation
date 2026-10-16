@@ -1,35 +1,29 @@
 using System.Drawing;
 using HdmAutomation.Core;
-using HdmAutomation.Windows;
+using HdmAutomation.Windows.Desktop;
+using HdmAutomation.Windows.Input;
 
 namespace HdmAutomation.Engine;
 
 public sealed class UiWindow
 {
-    private readonly UiToolkit _ui;
     private WindowInfo _info;
 
     internal UiWindow(UiToolkit ui, WindowInfo info)
     {
-        _ui = ui;
+        Ui = ui;
         _info = info;
     }
 
     public string ProcessName => _info.ProcessName;
-    internal UiToolkit Ui => _ui;
-    internal IntPtr Handle => _info.Handle;
 
-    internal Rectangle Bounds => Current().Bounds;
+    internal UiToolkit Ui { get; }
 
-    private WindowInfo Current()
-    {
-        if (!WindowFinder.Exists(_info)) throw new StepFailedException("The window closed while the routine was using it.");
-        return _info = WindowFinder.Refresh(_info);
-    }
+    internal static Point Center(Rectangle area) => new(area.X + area.Width / 2, area.Y + area.Height / 2);
 
     public UiWindow BringToFront()
     {
-        _ui.Context.ThrowIfCancelled();
+        Ui.Context.ThrowIfCancelled();
         if (!WindowController.BringToFront(WindowFinder.RootOf(Current().Handle)))
         {
             throw new StepFailedException("Could not bring the window to the front. Is another program holding focus?");
@@ -57,7 +51,8 @@ public sealed class UiWindow
             .ToList();
         if (edits.Count != 1)
         {
-            throw new StepFailedException($"Expected exactly one visible '{classContains}' box in the window, found {edits.Count}.");
+            throw new StepFailedException(
+                $"Expected exactly one visible '{classContains}' box in the window, found {edits.Count}.");
         }
         return new UiEdit(this, edits[0]);
     }
@@ -72,16 +67,15 @@ public sealed class UiWindow
     public void Click(string text)
     {
         BringToFront();
-        var at = TryLocate(text) ?? throw new StepFailedException($"Could not find '{text}' in the window.");
-        InputSender.Click(at);
+        var location = TryLocate(text) ?? throw new StepFailedException($"Could not find '{text}' in the window.");
+        Mouse.Click(location);
     }
 
     public void RequireText(string text)
     {
         BringToFront();
-        var b = Current().Bounds;
-        using var shot = ScreenCapture.Capture(b);
-        var match = TextMatcher.FindBest(text, _ui.Ocr.ReadLines(shot, b.Location));
+        var bounds = Current().Bounds;
+        var match = ReadWindowText(text, bounds);
         if (match.Status != MatchStatus.Found)
         {
             throw new StepFailedException($"The window does not show '{text}' ({match.Status}). Nothing was changed.");
@@ -92,17 +86,31 @@ public sealed class UiWindow
     {
         if (!WindowFinder.Exists(_info)) return null;
         var window = WindowFinder.Refresh(_info);
-        var wanted = TextMatcher.Normalize(text);
 
-        var control = WindowFinder.Children(window.Handle)
-            .FirstOrDefault(c => c.Visible && TextMatcher.Normalize(c.Title).Contains(wanted, StringComparison.Ordinal));
+        var control = FindChildByTitle(window, text);
         if (control is not null) return Center(control.Bounds);
 
         if (!window.Visible || window.Bounds.Width <= 0 || window.Bounds.Height <= 0) return null;
-        using var shot = ScreenCapture.Capture(window.Bounds);
-        var found = TextMatcher.FindBest(text, _ui.Ocr.ReadLines(shot, window.Bounds.Location));
-        return found.Status == MatchStatus.Found ? Center(found.Line!.Bounds) : null;
+        var match = ReadWindowText(text, window.Bounds);
+        return match.Status == MatchStatus.Found ? Center(match.Line!.Bounds) : null;
     }
 
-    internal static Point Center(Rectangle r) => new(r.X + r.Width / 2, r.Y + r.Height / 2);
+    private static WindowInfo? FindChildByTitle(WindowInfo window, string text)
+    {
+        var wanted = TextMatcher.Normalize(text);
+        return WindowFinder.Children(window.Handle)
+            .FirstOrDefault(c => c.Visible && TextMatcher.Normalize(c.Title).Contains(wanted, StringComparison.Ordinal));
+    }
+
+    private MatchResult ReadWindowText(string text, Rectangle area)
+    {
+        using var screenshot = ScreenCapture.Capture(area);
+        return TextMatcher.FindBest(text, Ui.Ocr.ReadLines(screenshot, area.Location));
+    }
+
+    private WindowInfo Current()
+    {
+        if (!WindowFinder.Exists(_info)) throw new StepFailedException("The window closed while the routine was using it.");
+        return _info = WindowFinder.Refresh(_info);
+    }
 }

@@ -1,5 +1,7 @@
 using HdmAutomation.Core;
-using HdmAutomation.Windows;
+using HdmAutomation.Windows.Desktop;
+using HdmAutomation.Windows.Input;
+using HdmAutomation.Windows.Lists;
 
 namespace HdmAutomation.Engine;
 
@@ -24,17 +26,19 @@ public sealed class UiList
         _window.BringToFront();
 
         var area = WindowFinder.Refresh(_control).Bounds;
-        var result = ListSearch.Find(_window.Ui.Ocr, area, item, new ListSearchOptions(), context.Log, context.Cancel);
+        var searcher = new ListSearcher(_window.Ui.Ocr, area, new ListSearchOptions(), context.Log, context.Cancel);
+        var result = searcher.Find(item);
         foreach (var warning in result.Warnings) context.Log($"WARNING: {warning}");
 
         if (result.Match.Status != MatchStatus.Found)
         {
-            throw new StepFailedException($"'{item}' was not clearly found in the list ({result.Match.Status}: {result.Match.Detail}). Nothing was clicked.");
+            throw new StepFailedException(
+                $"'{item}' was not clearly found in the list ({result.Match.Status}: {result.Match.Detail}). Nothing was clicked.");
         }
 
-        var at = UiWindow.Center(result.Match.Line!.Bounds);
+        var location = UiWindow.Center(result.Match.Line!.Bounds);
         context.Log($"Found '{item}' after {result.PagesRead} page(s)");
-        if (doubleClick) InputSender.DoubleClick(at);
-        else InputSender.Click(at);
+        if (doubleClick) Mouse.DoubleClick(location);
+        else Mouse.Click(location);
     }
 }

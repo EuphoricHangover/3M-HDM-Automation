@@ -1,9 +1,13 @@
 using HdmAutomation.Windows;
+using HdmAutomation.Windows.Desktop;
+using HdmAutomation.Windows.Input;
 
 namespace HdmAutomation.Engine;
 
 public sealed class UiEdit
 {
+    private const int ExtraBackspaces = 5;
+
     private readonly UiWindow _window;
     private readonly WindowInfo _control;
 
@@ -18,37 +22,46 @@ public sealed class UiEdit
         _window.BringToFront();
         _window.Ui.Context.ThrowIfCancelled();
 
-        InputSender.Click(UiWindow.Center(WindowFinder.Refresh(_control).Bounds));
-        Thread.Sleep(150);
+        Mouse.Click(UiWindow.Center(WindowFinder.Refresh(_control).Bounds));
+        Thread.Sleep(Delay.ControlReaction);
 
-        InputSender.SelectAll();
-        InputSender.PressVirtualKey(InputSender.VkDelete);
-        Thread.Sleep(150);
-        if (Read().Length > 0)
+        Clear();
+        var remaining = ReadText().Length;
+        if (remaining > 0)
         {
-            InputSender.PressVirtualKey(InputSender.VkHome);
-            InputSender.PressVirtualKey(InputSender.VkEnd, InputSender.VkShift);
-            InputSender.PressVirtualKey(InputSender.VkDelete);
-            Thread.Sleep(150);
+            throw new StepFailedException($"Could not clear the text box ({remaining} character(s) left). Nothing was typed.");
         }
-        if (Read().Length > 0)
-        {
-            InputSender.PressVirtualKey(InputSender.VkEnd);
-            for (var i = Read().Length + 5; i > 0; i--) InputSender.PressVirtualKey(InputSender.VkBack);
-            Thread.Sleep(150);
-        }
-        var left = Read().Length;
-        if (left > 0) throw new StepFailedException($"Could not clear the text box ({left} character(s) left). Nothing was typed.");
 
-        InputSender.TypeText(text);
-        Thread.Sleep(200);
+        Keyboard.TypeText(text);
+        Thread.Sleep(Delay.TextEntry);
 
-        var typed = Read();
+        var typed = ReadText();
         if (typed != text) throw new StepFailedException($"The text box reads '{typed}' but should read '{text}'.");
     }
 
-    private string Read() =>
-        new[] { WindowFinder.TextOf(_control.Handle) }
-            .Concat(WindowFinder.Children(_control.Handle).Select(c => c.Title))
-            .FirstOrDefault(t => t.Length > 0) ?? string.Empty;
+    private void Clear()
+    {
+        Keyboard.SelectAll();
+        Keyboard.Press(VirtualKey.Delete);
+        Thread.Sleep(Delay.ControlReaction);
+        if (ReadText().Length == 0) return;
+
+        Keyboard.Press(VirtualKey.Home);
+        Keyboard.Press(VirtualKey.End, VirtualKey.Shift);
+        Keyboard.Press(VirtualKey.Delete);
+        Thread.Sleep(Delay.ControlReaction);
+        if (ReadText().Length == 0) return;
+
+        Keyboard.Press(VirtualKey.End);
+        for (var count = ReadText().Length + ExtraBackspaces; count > 0; count--)
+        {
+            Keyboard.Press(VirtualKey.Backspace);
+        }
+        Thread.Sleep(Delay.ControlReaction);
+    }
+
+    private string ReadText() =>
+        new[] { ControlText.Read(_control.Handle) }
+            .Concat(WindowFinder.Children(_control.Handle).Select(child => child.Title))
+            .FirstOrDefault(text => text.Length > 0) ?? string.Empty;
 }

@@ -13,9 +13,14 @@ internal static class FileLog
             lock (Gate)
             {
                 Directory.CreateDirectory(Folder);
-                File.AppendAllText(Path.Combine(Folder, $"hdm-{DateTime.Now:yyyyMMdd}.log"), $"{DateTime.Now:HH:mm:ss}  {message}{Environment.NewLine}");
+                var now = DateTime.Now;
+                var file = Path.Combine(Folder, $"hdm-{now:yyyyMMdd}.log");
+                File.AppendAllText(file, $"{now:HH:mm:ss}  {message}{Environment.NewLine}");
             }
         }
-        catch (Exception) {  }
+        catch (Exception)
+        {
+            return;
+        }
     }
 }

@@ -1,3 +1,5 @@
+using HdmAutomation.Windows.Ocr;
+
 namespace HdmAutomation.Engine;
 
 public sealed record RunParameters(string DateRange, string OutputFolder);
@@ -6,7 +8,7 @@ public sealed class RoutineContext
 {
     private readonly Action<string> _log;
 
-    internal RoutineContext(RunParameters parameters, CancellationToken cancel, Action<string> log, Func<Windows.TesseractOcr> ocrFactory)
+    internal RoutineContext(RunParameters parameters, CancellationToken cancel, Action<string> log, Func<TesseractOcr> ocrFactory)
     {
         Parameters = parameters;
         Cancel = cancel;

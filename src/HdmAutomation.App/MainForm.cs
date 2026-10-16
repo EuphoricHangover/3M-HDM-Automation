@@ -1,36 +1,20 @@
-using System.Runtime.InteropServices;
 using HdmAutomation.Core;
 using HdmAutomation.Engine;
-using HdmAutomation.Windows;
+using HdmAutomation.Windows.Desktop;
 
 namespace HdmAutomation.App;
 
-internal sealed class MainForm : Form
+internal sealed partial class MainForm : Form
 {
-    private const int StopHotKeyId = 1;
-    private const int WmHotKey = 0x0312;
-    private const uint ModControl = 0x2, ModAlt = 0x1, VkX = 0x58;
-
-    [DllImport("user32.dll")] private static extern bool RegisterHotKey(IntPtr hWnd, int id, uint modifiers, uint vk);
-    [DllImport("user32.dll")] private static extern bool UnregisterHotKey(IntPtr hWnd, int id);
+    private const string StopButtonText = "Stop (Ctrl+Alt+X)";
+    private const int AutoStartSeconds = 10;
 
     private readonly IReadOnlyList<Routine> _routines;
     private readonly AppSettings _settings = AppSettings.Load();
     private readonly RoutineRunner _runner;
 
-    private readonly ComboBox _routineBox = new() { DropDownStyle = ComboBoxStyle.DropDownList, Dock = DockStyle.Fill };
-    private readonly Label _detectedLabel = new() { AutoSize = true, ForeColor = SystemColors.GrayText };
-    private readonly TextBox _rangeBox = new() { Dock = DockStyle.Fill };
-    private readonly TextBox _outputBox = new() { Dock = DockStyle.Fill };
-    private readonly ComboBox _stepBox = new() { DropDownStyle = ComboBoxStyle.DropDownList, Dock = DockStyle.Fill };
-    private readonly Button _runButton = new() { Text = "Run", AutoSize = true };
-    private readonly Button _stopButton = new() { Text = "Stop (Ctrl+Alt+X)", AutoSize = true, Enabled = false };
-    private readonly CheckBox _autoRun = new() { Text = "Run automatically when the program opens (after a 10 second countdown)", AutoSize = true };
-    private readonly Label _status = new() { AutoSize = true, Text = "Ready." };
-    private readonly TextBox _log = new() { Multiline = true, ReadOnly = true, ScrollBars = ScrollBars.Vertical, Dock = DockStyle.Fill, Font = new Font("Consolas", 9f) };
-
     private CancellationTokenSource? _cancel;
-    private System.Windows.Forms.Timer? _countdown;
+    private AutoStartCountdown? _countdown;
 
     public MainForm()
     {
@@ -46,72 +30,16 @@ internal sealed class MainForm : Form
             Log);
 
         BuildLayout();
-
-        foreach (var r in _routines) _routineBox.Items.Add(r.Name);
-        _routineBox.SelectedIndexChanged += (_, _) => RefreshSteps();
-        _rangeBox.TextChanged += (_, _) => RefreshSteps();
-        _runButton.Click += (_, _) => StartRun();
-        _stopButton.Click += (_, _) => _cancel?.Cancel();
-
-        _rangeBox.Text = DateRange.PreviousMonth(DateOnly.FromDateTime(DateTime.Today)).ToString();
-        _outputBox.Text = _settings.OutputFolder ??
-            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "HDM Exports");
-        _autoRun.Checked = _settings.RunOnLaunch;
-
-        var last = _routines.ToList().FindIndex(r => r.Name == _settings.LastRoutine);
-        _routineBox.SelectedIndex = _routines.Count == 0 ? -1 : Math.Max(last, 0);
+        WireEvents();
+        ApplySettings();
     }
 
-    private void BuildLayout()
-    {
-        var grid = new TableLayoutPanel { Dock = DockStyle.Top, AutoSize = true, ColumnCount = 3, Padding = new Padding(12) };
-        grid.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
-        grid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
-        grid.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
-
-        void Row(string label, Control control, Control? extra = null)
-        {
-            grid.RowCount++;
-            grid.Controls.Add(new Label { Text = label, AutoSize = true, Anchor = AnchorStyles.Left, Margin = new Padding(0, 6, 8, 6) }, 0, grid.RowCount - 1);
-            grid.Controls.Add(control, 1, grid.RowCount - 1);
-            if (extra is not null) grid.Controls.Add(extra, 2, grid.RowCount - 1);
-        }
-
-        var detect = new Button { Text = "Detect window", AutoSize = true };
-        detect.Click += (_, _) => DetectRoutine();
-        var browse = new Button { Text = "Browse...", AutoSize = true };
-        browse.Click += (_, _) =>
-        {
-            using var dialog = new FolderBrowserDialog { SelectedPath = _outputBox.Text };
-            if (dialog.ShowDialog(this) == DialogResult.OK) _outputBox.Text = dialog.SelectedPath;
-        };
-
-        Row("Routine", _routineBox, detect);
-        grid.Controls.Add(_detectedLabel, 1, grid.RowCount);
-        grid.RowCount++;
-        Row("Date range", _rangeBox);
-        Row("Export folder", _outputBox, browse);
-        Row("Start at step", _stepBox);
-
-        var buttons = new FlowLayoutPanel { Dock = DockStyle.Top, AutoSize = true, Padding = new Padding(12, 0, 12, 0) };
-        buttons.Controls.AddRange(new Control[] { _runButton, _stopButton });
-
-        var options = new FlowLayoutPanel { Dock = DockStyle.Top, AutoSize = true, Padding = new Padding(12, 6, 12, 0), FlowDirection = FlowDirection.TopDown };
-        options.Controls.AddRange(new Control[] { _autoRun, _status });
-
-        var logPanel = new Panel { Dock = DockStyle.Fill, Padding = new Padding(12) };
-        logPanel.Controls.Add(_log);
-
-        Controls.Add(logPanel);
-        Controls.Add(options);
-        Controls.Add(buttons);
-        Controls.Add(grid);
-    }
+    private Routine? Selected => _routineBox.SelectedIndex >= 0 ? _routines[_routineBox.SelectedIndex] : null;
 
     protected override void OnHandleCreated(EventArgs e)
     {
         base.OnHandleCreated(e);
-        if (!RegisterHotKey(Handle, StopHotKeyId, ModControl | ModAlt, VkX))
+        if (!StopHotKey.Register(Handle))
         {
             Log("Could not register the Ctrl+Alt+X stop shortcut (another program uses it). Use the Stop button.");
         }
@@ -119,13 +47,13 @@ internal sealed class MainForm : Form
 
     protected override void OnHandleDestroyed(EventArgs e)
     {
-        UnregisterHotKey(Handle, StopHotKeyId);
+        StopHotKey.Unregister(Handle);
         base.OnHandleDestroyed(e);
     }
 
     protected override void WndProc(ref Message m)
     {
-        if (m.Msg == WmHotKey && m.WParam.ToInt32() == StopHotKeyId) _cancel?.Cancel();
+        if (StopHotKey.IsPressed(m)) _cancel?.Cancel();
         base.WndProc(ref m);
     }
 
@@ -144,31 +72,53 @@ internal sealed class MainForm : Form
             MessageBox.Show(this, "A routine is running. Stop it first.", Text);
             return;
         }
+        SaveSettings();
+        base.OnFormClosing(e);
+    }
+
+    private void WireEvents()
+    {
+        _routineBox.SelectedIndexChanged += (_, _) => RefreshSteps();
+        _rangeBox.TextChanged += (_, _) => RefreshSteps();
+        _runButton.Click += (_, _) => StartRun();
+        _stopButton.Click += (_, _) => StopRequested();
+    }
+
+    private void ApplySettings()
+    {
+        foreach (var routine in _routines) _routineBox.Items.Add(routine.Name);
+
+        _rangeBox.Text = DateRange.PreviousMonth(DateOnly.FromDateTime(DateTime.Today)).ToString();
+        _outputBox.Text = _settings.OutputFolder ??
+            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "HDM Exports");
+        _autoRun.Checked = _settings.RunOnLaunch;
+
+        var lastIndex = _routines.ToList().FindIndex(routine => routine.Name == _settings.LastRoutine);
+        _routineBox.SelectedIndex = _routines.Count == 0 ? -1 : Math.Max(lastIndex, 0);
+    }
+
+    private void SaveSettings()
+    {
         _settings.OutputFolder = _outputBox.Text;
         _settings.LastRoutine = Selected?.Name;
         _settings.RunOnLaunch = _autoRun.Checked;
         _settings.Save();
-        base.OnFormClosing(e);
     }
-
-    private Routine? Selected => _routineBox.SelectedIndex >= 0 ? _routines[_routineBox.SelectedIndex] : null;
 
     private void DetectRoutine()
     {
-        var found = new List<Routine>();
-        foreach (var r in _routines)
-        {
-            if (WindowFinder.FindByTitle("any", r.StartWindowTitle).Count == 1) found.Add(r);
-        }
+        var matching = _routines
+            .Where(routine => WindowFinder.FindByTitle(processName: null, routine.StartWindowTitle).Count == 1)
+            .ToList();
 
-        if (found.Count == 1)
+        if (matching.Count == 1)
         {
-            _routineBox.SelectedIndex = _routines.ToList().IndexOf(found[0]);
-            _detectedLabel.Text = $"Found the '{found[0].StartWindowTitle}' window.";
+            _routineBox.SelectedIndex = _routines.ToList().IndexOf(matching[0]);
+            _detectedLabel.Text = $"Found the '{matching[0].StartWindowTitle}' window.";
         }
-        else if (found.Count > 1)
+        else if (matching.Count > 1)
         {
-            _detectedLabel.Text = $"{found.Count} routines match the windows on screen; pick one.";
+            _detectedLabel.Text = $"{matching.Count} routines match the windows on screen; pick one.";
         }
         else
         {
@@ -184,87 +134,66 @@ internal sealed class MainForm : Form
         var steps = routine.GetSteps();
         for (var i = 0; i < steps.Count; i++) _stepBox.Items.Add($"{i + 1}. {steps[i].Name}");
 
-        var next = 0;
-        if (DateRange.TryParse(_rangeBox.Text, out var range, out _))
-        {
-            var state = _runner.LoadState(routine, range.ToString());
-            if (state is not null && state.Steps.Count == steps.Count) next = Math.Min(state.NextStepIndex(), steps.Count - 1);
-        }
-        _stepBox.SelectedIndex = next;
+        _stepBox.SelectedIndex = SuggestedStartStep(routine, steps.Count);
+    }
+
+    private int SuggestedStartStep(Routine routine, int stepCount)
+    {
+        if (!DateRange.TryParse(_rangeBox.Text, out var range, out _)) return 0;
+
+        var state = _runner.LoadState(routine, range.ToString());
+        if (state is null || state.Steps.Count != stepCount) return 0;
+        return Math.Min(state.NextStepIndex(), stepCount - 1);
     }
 
     private void BeginCountdown()
     {
-        var left = 10;
-        _countdown = new System.Windows.Forms.Timer { Interval = 1000 };
-        _stopButton.Enabled = true;
         _stopButton.Text = "Cancel";
-        _stopButton.Click += CancelCountdown;
-        _status.Text = $"Starting in {left} seconds. Press Cancel to stop.";
-        _countdown.Tick += (_, _) =>
-        {
-            left--;
-            if (left > 0) { _status.Text = $"Starting in {left} seconds. Press Cancel to stop."; return; }
-            EndCountdown();
-            StartRun();
-        };
+        _stopButton.Enabled = true;
+        _countdown = new AutoStartCountdown(
+            AutoStartSeconds,
+            seconds => _status.Text = $"Starting in {seconds} seconds. Press Cancel to stop.",
+            () =>
+            {
+                EndCountdown();
+                StartRun();
+            });
         _countdown.Start();
-    }
-
-    private void CancelCountdown(object? sender, EventArgs e)
-    {
-        if (_countdown is null) return;
-        EndCountdown();
-        _status.Text = "Automatic start cancelled.";
     }
 
     private void EndCountdown()
     {
-        _countdown?.Stop();
         _countdown?.Dispose();
         _countdown = null;
-        _stopButton.Click -= CancelCountdown;
-        _stopButton.Text = "Stop (Ctrl+Alt+X)";
+        _stopButton.Text = StopButtonText;
         _stopButton.Enabled = false;
+    }
+
+    private void StopRequested()
+    {
+        if (_countdown is not null)
+        {
+            EndCountdown();
+            _status.Text = "Automatic start cancelled.";
+            return;
+        }
+        _cancel?.Cancel();
     }
 
     private async void StartRun()
     {
         if (_cancel is not null || Selected is not { } routine) return;
-
-        if (!DateRange.TryParse(_rangeBox.Text, out var range, out var error))
-        {
-            MessageBox.Show(this, error, "Date range", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-            return;
-        }
-        var outputFolder = _outputBox.Text.Trim();
-        if (outputFolder.Length == 0)
-        {
-            MessageBox.Show(this, "Choose a folder for the exported files.", Text, MessageBoxButtons.OK, MessageBoxIcon.Warning);
-            return;
-        }
+        if (!TryReadParameters(out var parameters)) return;
 
         var startStep = Math.Max(_stepBox.SelectedIndex, 0);
-        var parameters = new RunParameters(range.ToString(), outputFolder);
-
         _cancel = new CancellationTokenSource();
         _runButton.Enabled = false;
         _stopButton.Enabled = true;
         _status.Text = $"Running '{routine.Name}'...  (Ctrl+Alt+X stops it)";
         Log($"Starting '{routine.Name}' for {parameters.DateRange} at step {startStep + 1}");
-
         WindowState = FormWindowState.Minimized;
 
-        RunResult result;
-        try
-        {
-            var token = _cancel.Token;
-            result = await Task.Run(() => _runner.Run(routine, parameters, startStep, token));
-        }
-        catch (Exception ex)
-        {
-            result = new RunResult(RunOutcome.Failed, ex.Message);
-        }
+        var result = await RunInBackground(routine, parameters, startStep);
 
         _cancel.Dispose();
         _cancel = null;
@@ -272,24 +201,65 @@ internal sealed class MainForm : Form
         _stopButton.Enabled = false;
         WindowState = FormWindowState.Normal;
         Activate();
+        ShowResult(routine, parameters, result);
+    }
 
+    private bool TryReadParameters(out RunParameters parameters)
+    {
+        parameters = new RunParameters(string.Empty, string.Empty);
+
+        if (!DateRange.TryParse(_rangeBox.Text, out var range, out var error))
+        {
+            MessageBox.Show(this, error, "Date range", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            return false;
+        }
+
+        var outputFolder = _outputBox.Text.Trim();
+        if (outputFolder.Length == 0)
+        {
+            MessageBox.Show(this, "Choose a folder for the exported files.", Text, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            return false;
+        }
+
+        parameters = new RunParameters(range.ToString(), outputFolder);
+        return true;
+    }
+
+    private async Task<RunResult> RunInBackground(Routine routine, RunParameters parameters, int startStep)
+    {
+        var token = _cancel!.Token;
+        try
+        {
+            return await Task.Run(() => _runner.Run(routine, parameters, startStep, token));
+        }
+        catch (Exception ex)
+        {
+            return new RunResult(RunOutcome.Failed, ex.Message);
+        }
+    }
+
+    private void ShowResult(Routine routine, RunParameters parameters, RunResult result)
+    {
         _status.Text = result.Outcome switch
         {
-            RunOutcome.Completed => $"Finished. Files are in {outputFolder}",
+            RunOutcome.Completed => $"Finished. Files are in {parameters.OutputFolder}",
             RunOutcome.Cancelled => "Stopped.",
             _ => "Failed. See the log.",
         };
         Log(result.Message);
         RefreshSteps();
-        MessageBox.Show(this, result.Message, routine.Name, MessageBoxButtons.OK,
-            result.Outcome == RunOutcome.Completed ? MessageBoxIcon.Information : MessageBoxIcon.Warning);
+
+        var icon = result.Outcome == RunOutcome.Completed ? MessageBoxIcon.Information : MessageBoxIcon.Warning;
+        MessageBox.Show(this, result.Message, routine.Name, MessageBoxButtons.OK, icon);
     }
 
     private void Log(string message)
     {
         FileLog.Write(message);
-        void Append() => _log.AppendText($"{DateTime.Now:HH:mm:ss}  {message}{Environment.NewLine}");
-        if (InvokeRequired) BeginInvoke(Append);
-        else Append();
+        if (InvokeRequired) BeginInvoke(() => AppendToLog(message));
+        else AppendToLog(message);
     }
+
+    private void AppendToLog(string message) =>
+        _log.AppendText($"{DateTime.Now:HH:mm:ss}  {message}{Environment.NewLine}");
 }

@@ -1,4 +1,4 @@
-using HdmAutomation.Windows;
+using HdmAutomation.Windows.Ocr;
 
 namespace HdmAutomation.Engine;
 

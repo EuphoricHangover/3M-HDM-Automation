@@ -17,34 +17,7 @@ Optionally tick *Run automatically when the program opens*: it detects the windo
 
 ## Adding a routine
 
-Each routine is one `.cs` file in `src/HdmAutomation.Routines/`. Copy `NewRoutineTemplate.txt` to `MyReport.cs`, rename the class, fill in the steps, rebuild. It appears in the list automatically.
-
-```csharp
-public sealed class MyReport : Routine
-{
-    public override string Name => "My Report";
-    public override string StartWindowTitle => "Current Summaries";
-
-    protected override void Define(StepList steps)
-    {
-        steps.Add("Open the report", c =>
-        {
-            var w = c.Ui.Window("Current Summaries");
-            w.BringToFront();
-            w.List("TEIXTreeView").Open("TB-Some Report");     // finds it by reading the list, then double-clicks
-        });
-        steps.Add("Export", c =>
-        {
-            var viewer = c.Ui.Window("Report Viewer", waitSeconds: 90);
-            viewer.Sheet().ExportCsv(c.OutputPath("my-report.csv"), firstCell: "A3");
-        });
-    }
-}
-```
-
-What a step can do (`c.Ui`): `Window(title)`, `RequireNoWindow(title)`, `WaitAndClick(text, minutes)`; on a window: `BringToFront()`, `Place(x, y, w, h)`, `List(class).Select/Open(item)`, `Edit(class).SetText(text)`, `Click(text)`, `RequireText(text)`, `Sheet().ExportCsv(path, firstCell)`.
-
-Rules: steps may not share variables (a run can restart at any step), every action checks before it acts and stops with a clear message instead of guessing, and nothing from the screen goes in the log.
+Each routine is one `.cs` file in `src/HdmAutomation.Routines/`. Copy `NewRoutineTemplate.txt`, rename the class, fill in the steps and rebuild; it appears in the list automatically. The full toolkit and the rules for steps are in [docs/WritingRoutines.md](docs/WritingRoutines.md).
 
 ## Layout
 
@@ -56,11 +29,11 @@ Rules: steps may not share variables (a run can restart at any step), every acti
 | `HdmAutomation.Routines` | **Your routines**, one file each. |
 | `HdmAutomation.App` | The window you use (`HdmAutomation.exe`). |
 | `HdmAutomation.Cli` | `hdmtool.exe inspect`: shows a program's window and control class names (no text) for building new routines. |
-| `tools/` | `Inspect-Windows.ps1`, `Get-Tessdata.ps1`. |
+| `tools/` | `Get-Tessdata.ps1`, downloads the OCR model. |
 
 ## Finding the right names for a new routine
 
-Run `hdmtool inspect --process any --show-titles` to see window titles and classes, `hdmtool inspect --at-cursor` to identify whatever is under the mouse, and `hdmtool inspect --find-class <text>` to see which program owns a control. Microsoft's free Accessibility Insights for Windows also works.
+See the last section of [docs/WritingRoutines.md](docs/WritingRoutines.md).
 
 ## Privacy
 

@@ -1,37 +1,25 @@
-// Copy this file to a new name ending in .cs (for example MyReport.cs) inside the Routines folder,
-// rename the class, and fill in the steps. The program lists it automatically after the next build.
-//
-// Rules for steps:
-//  * Steps run in order. A run can be restarted at any step, so a step must find the windows it needs on screen
-//    by itself and must not rely on variables from an earlier step.
-//  * Read before you act: use RequireText(...) to confirm you are in the right window.
-//  * Never write screen text or patient data to the log.
-
 using HdmAutomation.Engine;
 
 namespace HdmAutomation.Routines;
 
 public sealed class MyReport : Routine
 {
-    public override string Name => "My Report";                     // shown in the list
-    public override string Description => "What this routine does."; // optional
-    public override string StartWindowTitle => "Current Summaries";  // part of the title of the window it starts from
+    public override string Name => "My Report";
+    public override string Description => "What this routine does.";
+    public override string StartWindowTitle => "Current Summaries";
 
     protected override void Define(StepList steps)
     {
-        steps.Add("Open the window", c =>
+        steps.Add("First step", c =>
         {
-            var w = c.Ui.Window("Part of a window title");     // waits up to 10 s; fails if missing or ambiguous
-            w.BringToFront();
-            // w.List("TEIXTreeView").Open("Name of the item");  // find an item by reading the list, then double-click
-            // w.Edit("ButtonEdit").SetText(c.Parameters.DateRange);
-            // w.Click("Button text");                           // button caption, or read off the screen
+            var window = c.Ui.Window("Part of a window title");
+            window.BringToFront();
         });
 
-        steps.Add("Export", c =>
+        steps.Add("Second step", c =>
         {
-            var viewer = c.Ui.Window("Report Viewer", waitSeconds: 90);
-            viewer.Sheet("AfxOleControl42").ExportCsv(c.OutputPath("my-report.csv"), firstCell: "A3");
+            var window = c.Ui.Window("Part of another window title");
+            window.RequireText("Text that proves this is the right window");
         });
     }
 }
