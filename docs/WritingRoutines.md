@@ -35,11 +35,13 @@ Each step receives a context `c`:
 | `c.Ui.Window(title, className?, waitSeconds = 10)` | Waits for exactly one window whose title contains `title`. Fails if none or several. |
 | `c.Ui.TryWindow(title)` | Same, but returns `null` instead of failing. |
 | `c.Ui.RequireNoWindow(title)` | Fails if the window is open. Use it to refuse to start on top of a stale window. |
+| `c.Ui.WaitUntilClosed(title, waitSeconds = 10)` | Waits for a window to close. |
 | `c.Ui.WaitAndClick(text, timeoutMinutes)` | Waits for the text to appear in the program and clicks it. |
 | `window.BringToFront()` / `window.Place(x, y, w, h)` | Focus or move the window. |
 | `window.RequireText(text)` | Fails unless the text is visible in the window. |
 | `window.Click(text)` | Clicks a button by caption, falling back to reading it off the screen. |
 | `window.List(class).Select(item)` / `.Open(item)` | Finds an item by reading the list with OCR, then clicks or double-clicks it. |
+| `window.Toolbar(class).ClickButton(index)` | Clicks the n-th button (from 0) of a toolbar, assuming square buttons as tall as the toolbar. |
 | `window.Edit(class).SetText(text)` | Clears the box and types, then checks what the box now holds. |
 | `window.Sheet(class).ExportCsv(path, firstCell, gotoKey)` | Goes to `firstCell`, selects to the end, copies and writes a CSV. |
 

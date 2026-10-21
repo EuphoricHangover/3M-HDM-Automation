@@ -58,6 +58,20 @@ public sealed class UiToolkit
         }
     }
 
+    public void WaitUntilClosed(string titleContains, int waitSeconds = 10)
+    {
+        var deadline = DateTime.UtcNow.AddSeconds(waitSeconds);
+        while (Find(titleContains, null).Count > 0)
+        {
+            Context.ThrowIfCancelled();
+            if (DateTime.UtcNow >= deadline)
+            {
+                throw new StepFailedException($"The '{titleContains}' window did not close (waited {waitSeconds} seconds).");
+            }
+            Context.Wait(Delay.WindowPoll);
+        }
+    }
+
     public void WaitAndClick(string text, int timeoutMinutes)
     {
         var processName = Context.ProcessName ?? throw new StepFailedException(

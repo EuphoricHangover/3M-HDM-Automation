@@ -44,6 +44,13 @@ public sealed class UiWindow
         return new UiList(this, control);
     }
 
+    public UiToolbar Toolbar(string classContains = "TSpTBXToolbar")
+    {
+        var control = WindowFinder.FindControlByClass(Current(), classContains)
+            ?? throw new StepFailedException($"No visible '{classContains}' toolbar found in the window.");
+        return new UiToolbar(this, control);
+    }
+
     public UiEdit Edit(string classContains)
     {
         var edits = WindowFinder.Children(Current().Handle)

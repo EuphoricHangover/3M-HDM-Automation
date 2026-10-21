@@ -5,13 +5,40 @@ namespace HdmAutomation.Routines;
 public sealed class UrologySurgeryStats : Routine
 {
     private const string Report = "TB-Urology Surgery Stats";
+    private static readonly string? RadDefinition = null;
 
     public override string Name => "Urology Surgery Stats";
-    public override string Description => "Opens the report, sets the date range, builds it, and exports the sheet to CSV.";
-    public override string StartWindowTitle => "Current Summaries";
+    public override string Description => "Opens the report from the front menu, sets the date range, builds it, and exports the sheet to CSV.";
+    public override string StartWindowTitle => "Front Menu";
 
     protected override void Define(StepList steps)
     {
+        steps.Add("Open the Reporter", c =>
+        {
+            c.Ui.RequireNoWindow("Report Viewer");
+            if (c.Ui.TryWindow("Management Reporter") is null)
+            {
+                c.Ui.Window("Front Menu").Toolbar().ClickButton(0);
+            }
+            c.Ui.Window("Management Reporter");
+        });
+
+        steps.Add("Select the RAD", c =>
+        {
+            c.Ui.Window("Management Reporter").Click("Select RAD");
+
+            var definitions = c.Ui.Window("Report Access Definitions");
+            if (RadDefinition is not null) definitions.List("TcxGroupBox").Select(RadDefinition);
+            definitions.Click("Select Rad");
+            c.Ui.WaitUntilClosed("Report Access Definitions");
+        });
+
+        steps.Add("Open Current Summaries", c =>
+        {
+            c.Ui.Window("Management Reporter").Click("Summary");
+            c.Ui.Window("Current Summaries");
+        });
+
         steps.Add("Open the report", c =>
         {
             c.Ui.RequireNoWindow("Report Viewer");
