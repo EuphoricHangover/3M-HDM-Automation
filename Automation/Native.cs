@@ -23,7 +23,6 @@ internal static class Native
     public const int ScreenTop = 77;
     public const int ScreenWidth = 78;
     public const int ScreenHeight = 79;
-    public const uint RootAncestor = 2;
     public const uint UnicodeText = 13;
 
     public delegate bool EnumCallback(IntPtr handle, IntPtr parameter);
@@ -76,14 +75,14 @@ internal static class Native
         }
     }
 
-    [DllImport("user32.dll")]
-    public static extern bool EnumWindows(EnumCallback callback, IntPtr parameter);
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+    public static extern IntPtr FindWindow(string className, string? title);
+
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+    public static extern IntPtr FindWindowEx(IntPtr parent, IntPtr after, string? className, string? title);
 
     [DllImport("user32.dll")]
     public static extern bool EnumChildWindows(IntPtr parent, EnumCallback callback, IntPtr parameter);
-
-    [DllImport("user32.dll", EntryPoint = "GetWindowTextW", CharSet = CharSet.Unicode)]
-    public static extern int GetWindowText(IntPtr handle, [Out] char[] buffer, int maxCount);
 
     [DllImport("user32.dll", EntryPoint = "GetClassNameW", CharSet = CharSet.Unicode)]
     public static extern int GetClassName(IntPtr handle, [Out] char[] buffer, int maxCount);
@@ -102,9 +101,6 @@ internal static class Native
 
     [DllImport("user32.dll")]
     public static extern bool IsIconic(IntPtr handle);
-
-    [DllImport("user32.dll")]
-    public static extern IntPtr GetAncestor(IntPtr handle, uint flags);
 
     [DllImport("user32.dll")]
     public static extern bool ShowWindow(IntPtr handle, int command);

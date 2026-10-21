@@ -38,11 +38,11 @@ After `OpenSummaries()` any number of reports from that RAD can be copied. For a
 
 | Folder | Purpose |
 |---|---|
-| `3M` | Finding and driving the 3M windows, lists and sheets, and writing to Excel. |
+| `3M` | `ThreeMManager` (the windows and the steps), the list search, and writing to Excel. |
 | `Automation` | Mouse, keyboard and clipboard. |
 | `OCR` | Reading text from the screen. |
 
-Class names for windows and controls come from Microsoft's free Accessibility Insights for Windows.
+Windows are found directly by their class names (`TFormFrontMenu`, `TfrmRepCenter`, `TfrmRad`, `TfrmSumGrp`, `TfrmSumEdit`, `TFrmViewer`), listed at the top of `3M/ThreeMManager.cs`. Buttons are found by reading the screen.
 
 ## Privacy and limits
 
@@ -51,4 +51,4 @@ Class names for windows and controls come from Microsoft's free Accessibility In
 - Needs the Microsoft Visual C++ Redistributable (x64) for Tesseract.
 - If the 3M program runs as administrator, run this one as administrator too.
 - The computer must be unlocked with the 3M windows visible.
-- Only window finding, list search, double click, typing the date range, Build Now, Yes now and the sheet copy were verified by hand. The Front Menu button, RAD list and closing windows are untested.
+- Only window finding, list search, double click, typing the date range, Build Now, Yes now and the sheet copy were verified by hand. The Front Menu button, the RAD list, closing windows, and waiting for the go-to window and the Report Complete dialog by screen text are untested.
