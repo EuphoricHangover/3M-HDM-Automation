@@ -1,5 +1,5 @@
 [CmdletBinding()]
-param([string]$Destination = (Join-Path $PSScriptRoot '..\tessdata'))
+param([string]$Destination = (Join-Path $PSScriptRoot 'OCR\data'))
 
 $ErrorActionPreference = 'Stop'
 New-Item -ItemType Directory -Force -Path $Destination | Out-Null

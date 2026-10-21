@@ -5,8 +5,15 @@
     <TargetFramework>net8.0-windows</TargetFramework>
     <Platforms>x64</Platforms>
     <PlatformTarget>x64</PlatformTarget>
+    <UseWPF>true</UseWPF>
     <ApplicationManifest>app.manifest</ApplicationManifest>
   </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Remove="Tests\**;obj\**;bin\**" />
+    <EmbeddedResource Remove="Tests\**;obj\**;bin\**" />
+    <None Remove="Tests\**;obj\**;bin\**" />
+  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="ClosedXML" Version="0.104.2" />
@@ -15,13 +22,14 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Using Include="System.IO" />
     <Using Include="HdmAutomation.Automation" />
     <Using Include="HdmAutomation.Ocr" />
     <Using Include="HdmAutomation.WindowManager" />
   </ItemGroup>
 
   <ItemGroup>
-    <None Include="tessdata\*.traineddata" Link="tessdata\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="OCR\data\*.traineddata" Link="OCR\data\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>

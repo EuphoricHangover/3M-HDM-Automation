@@ -24,26 +24,26 @@ public sealed class WindowManager : IDisposable
         CloseIfOpen(Properties);
         if (Find(Summaries) != IntPtr.Zero)
         {
-            Click(Find(Summaries), "Close");
+            ClickOCR(Find(Summaries), "Close");
             WaitUntilClosed(Summaries);
         }
 
         var reporter = Find(Reporter);
         if (reporter == IntPtr.Zero) reporter = OpenReporter();
-        Click(reporter, "Select RAD");
+        ClickHandle(reporter, "Select RAD");
 
         var definitions = Wait(RadWindow);
         BringToFront(definitions);
         var listArea = BoundsOf(FindChild(definitions, "TcxGroupBox") ?? definitions);
         Mouse.Click(_listSearch.Find(listArea, rad).Bounds.Center());
-        Click(definitions, "Select Rad");
+        ClickOCR(definitions, "Select Rad");
         WaitUntilClosed(RadWindow);
     }
 
     public void OpenSummaries()
     {
         Console.WriteLine("Opening Current Summaries");
-        Click(Wait(Reporter), "Summary");
+        ClickOCR(Wait(Reporter), "Summary");
         Wait(Summaries);
     }
 
@@ -92,7 +92,7 @@ public sealed class WindowManager : IDisposable
         var dateBox = FindChild(properties, "ButtonEdit") ?? throw new InvalidOperationException("The date box is not showing.");
         SetText(dateBox, dateRange);
 
-        Click(properties, "Build Now");
+        ClickOCR(properties, "Build Now");
         WaitAndClick("Yes, now", minutes: 30);
         return properties;
     }
@@ -152,12 +152,32 @@ public sealed class WindowManager : IDisposable
         if (ReadText(box) != text) throw new InvalidOperationException($"The date box reads '{ReadText(box)}' but should read '{text}'.");
     }
 
-    private void Click(IntPtr window, string text)
+    // Finds visible text on the screen with OCR and clicks it.
+    private void ClickOCR(IntPtr window, string text)
     {
         BringToFront(window);
         var line = TextMatcher.Find(text, _screen.ReadLines(BoundsOf(window)))
             ?? throw new InvalidOperationException($"Could not find '{text}' on the screen.");
         Mouse.Click(line.Bounds.Center());
+    }
+
+    // Finds a button by its accessible name through UI Automation (no OCR) and clicks it. For icon-only buttons.
+    private static void ClickHandle(IntPtr window, string name)
+    {
+        BringToFront(window);
+        var root = System.Windows.Automation.AutomationElement.FromHandle(window);
+        var condition = new System.Windows.Automation.AndCondition(
+            new System.Windows.Automation.PropertyCondition(System.Windows.Automation.AutomationElement.NameProperty, name),
+            new System.Windows.Automation.PropertyCondition(
+                System.Windows.Automation.AutomationElement.ControlTypeProperty, System.Windows.Automation.ControlType.Button));
+
+        var button = root.FindFirst(System.Windows.Automation.TreeScope.Descendants, condition)
+            ?? throw new InvalidOperationException($"Could not find the '{name}' button.");
+        var box = button.Current.BoundingRectangle;
+        if (box.IsEmpty || button.Current.IsOffscreen) throw new InvalidOperationException($"The '{name}' button is not visible.");
+
+        var center = new Rectangle((int)box.X, (int)box.Y, (int)box.Width, (int)box.Height).Center();
+        Mouse.Click(center);
     }
 
     private void WaitAndClick(string text, int minutes)

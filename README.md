@@ -4,7 +4,7 @@ A console program that drives the 3M Health Data Management program through mous
 
 ## Running it
 
-1. Install the .NET 8 SDK and run `tools\Get-Tessdata.ps1` once to download the OCR model.
+1. Install the .NET 8 SDK and run `.\Get-Tessdata.ps1` (saves `OCR\data\eng.traineddata`) once to download the OCR model.
 2. Open the 3M Front Menu.
 3. Edit `Program.cs` for the run, then `dotnet run -c Release`.
 

@@ -2,7 +2,7 @@ bin/
 obj/
 *.user
 .vs/
-# OCR model: download with tools/Get-Tessdata.ps1
-tessdata/*.traineddata
+# OCR model: download with Get-Tessdata.ps1
+OCR/data/*.traineddata
 # Debug dumps can contain screen text (possibly PHI). Never commit them.
 dump/

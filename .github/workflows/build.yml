@@ -13,7 +13,7 @@ jobs:
         with:
           dotnet-version: 8.0.x
       - name: Get OCR model
-        run: ./tools/Get-Tessdata.ps1
+        run: ./Get-Tessdata.ps1
       - name: Publish
         run: dotnet publish HdmAutomation.csproj -c Release -r win-x64 --self-contained -o publish/HdmAutomation
       - uses: actions/upload-artifact@v4

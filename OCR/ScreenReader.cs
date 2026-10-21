@@ -13,10 +13,10 @@ public sealed class ScreenReader : IDisposable
 
     public ScreenReader()
     {
-        var folder = Path.Combine(AppContext.BaseDirectory, "tessdata");
+        var folder = Path.Combine(AppContext.BaseDirectory, "OCR", "data");
         if (!File.Exists(Path.Combine(folder, "eng.traineddata")))
         {
-            throw new FileNotFoundException($"The OCR file eng.traineddata is missing from {folder}. Run tools/Get-Tessdata.ps1.");
+            throw new FileNotFoundException($"The OCR file eng.traineddata is missing from {folder}. Run Get-Tessdata.ps1.");
         }
 
         _engine = new TesseractEngine(folder, "eng", EngineMode.LstmOnly);
