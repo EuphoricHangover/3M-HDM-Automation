@@ -1,49 +1,69 @@
-# 3M HDM Automation
+# HDM Automation
 
-Automates a pre-2000s Windows program that only works through clicks and key presses. Windows are found by title, lists are read with offline OCR ([Tesseract](https://github.com/tesseract-ocr/tesseract), open source), and nothing leaves the computer.
+A console program that drives a pre-2000s Windows program through clicks and key presses. Windows are found by title, lists are read with offline OCR ([Tesseract](https://github.com/tesseract-ocr/tesseract)), and nothing leaves the computer.
 
-## Using the program
+## Running it
 
-1. **Build it** (`dotnet build -c Release`, needs the .NET 8 SDK), then run `HdmAutomation.exe` from `src\HdmAutomation.App\bin\Release\net8.0-windows\`.
-2. **Get the OCR model once:** run `tools\Get-Tessdata.ps1` *before* building (or copy `eng.traineddata` into a `tessdata` folder next to `HdmAutomation.exe`).
-3. In the window:
-   - **Routine:** which job to run. **Detect window** picks the routine whose start window is on screen.
-   - **Date range:** `yyyyMMdd-yyyyMMdd`. Defaults to last month. Impossible dates (like `20260431`) are refused.
-   - **Files folder:** the folder that holds the workbooks (for example `QBP`). CSV files saved with `SaveToCsv` go here too, named `<date range>-<name>.csv`.
-   - **Start at step:** a run saves its progress after every step. After a failure, this is preset to the step that failed, so **Run** carries on from there. Pick step 1 to start over.
-4. Press **Run**. The program minimizes itself and works through the steps. **Ctrl+Alt+X** (or Stop) cancels at any time.
+1. Install the .NET 8 SDK, then run `tools\Get-Tessdata.ps1` once to download the OCR model.
+2. `dotnet run -c Release`, or run `bin\Release\net8.0-windows\HdmAutomation.exe` after `dotnet build -c Release`.
+3. Answer the questions: the date range (`yyyyMMdd-yyyyMMdd`, last month by default) and the folder that holds the workbooks.
+4. Open the Front Menu of the program and press Enter. **Ctrl+Alt+X** stops the run.
 
-Optionally tick *Run automatically when the program opens*: it detects the window, counts down 10 seconds (cancellable), and starts.
+If a run stops, start the program again with the same date range. It offers to continue at the step that failed, and you can type any other step number.
 
-## Adding a routine
+## Writing the script
 
-Each routine is one `.cs` file in `src/HdmAutomation.Routines/` made of plain instructions, one line per report: `CopyReportToFile(rad, report, copyFrom, workbook, sheet, pasteAt)`. Copy `NewRoutineTemplate.txt`, rename the class, write the instructions and rebuild; it appears in the list automatically. The full toolkit and the rules for steps are in [docs/WritingRoutines.md](docs/WritingRoutines.md).
+`Program.cs` is the script. Each line handles one report, from the Front Menu to the pasted data:
+
+```csharp
+using var job = Job.Start();
+
+job.CopyReportToFile("TB report Writing", "TB-Urology Surgery Stats", "A3", "Urology.xlsx", "Data", "B2");
+job.CopyReportToCsv("TB report Writing", "Another report", "A3", "another-report.csv");
+
+job.Finish();
+```
+
+| Line | What it does |
+|---|---|
+| `CopyReportToFile(rad, report, copyFrom, workbook, sheet, pasteAt)` | Opens the Reporter, selects the RAD, finds the report, runs it for the date range, goes to `copyFrom`, selects to the end (Ctrl+Shift+End), copies, and pastes into the sheet at `pasteAt`. |
+| `CopyReportToCsv(rad, report, copyFrom, fileName)` | The same, saving a CSV named `<date range>-<fileName>`. |
+
+Every line is a step that can be resumed. Workbook names are relative to the workbook folder.
+
+## Workbooks
+
+- Only `.xlsx` files, closed in Excel while the program runs.
+- Only the pasted block changes. If it would cover a formula, nothing is written and the step fails.
+- Numbers are written as numbers. Values with a leading zero, more than 15 digits, an exponent or a date format stay text, so identifiers are never altered.
+- The first time a workbook is written, an untouched copy goes to `Backups\<date range>` in the workbook folder.
+- Cells in the old data area beyond the new block are not cleared.
 
 ## Layout
 
-| Project | Purpose |
+| Folder | Purpose |
 |---|---|
-| `HdmAutomation.Core` | Platform-independent logic, unit tested: fuzzy name matching, date ranges, clipboard text to CSV. |
-| `HdmAutomation.Windows` | Win32 windows, screenshots, mouse/keyboard, clipboard, Tesseract OCR, paged list search. |
-| `HdmAutomation.Engine` | `Routine` base class, step runner with saved progress, the `c.Ui` toolkit. |
-| `HdmAutomation.Routines` | **Your routines**, one file each. |
-| `HdmAutomation.App` | The window you use (`HdmAutomation.exe`). |
-| `HdmAutomation.Cli` | `hdmtool.exe inspect`: shows a program's window and control class names (no text) for building new routines. |
-| `tools/` | `Get-Tessdata.ps1`, downloads the OCR model. |
+| `Program.cs` | The script. |
+| `Automation/` | Steps, resume state, report navigation, and the window/list/sheet helpers. |
+| `Data/` | Fuzzy name matching, date ranges, clipboard text, CSV and workbook writing. |
+| `Desktop/`, `Input/`, `Interop/` | Windows, screenshots, clipboard, mouse, keyboard and the Win32 calls behind them. |
+| `Ocr/`, `Lists/` | Tesseract and the paged list search. |
+| `Tests/` | Unit tests: `dotnet test Tests`. |
+| `tools/` | `Get-Tessdata.ps1`. |
 
-## Finding the right names for a new routine
+## Finding class names
 
-See the last section of [docs/WritingRoutines.md](docs/WritingRoutines.md).
+The navigation lives in `Automation/ReportNavigator.cs`. Window titles and control classes come from Microsoft's free Accessibility Insights for Windows.
 
 ## Privacy
 
 - Everything runs locally; no network calls at runtime.
-- Logs (`%LocalAppData%\HdmAutomation\logs`) and progress files (`...\runs`) hold step names and results only, never screen text.
-- Exported CSVs, the temporary `Work` and `Backups` folders and the workbooks can contain patient data: choose the files folder accordingly and delete files you no longer need. The clipboard is emptied before and after every copy.
+- Logs (`%LocalAppData%\HdmAutomation\logs`) and progress files (`...\runs`) hold step names only, never screen text.
+- Workbooks, CSV files and the `Backups` folder can contain patient data. Keep them in a protected folder and delete what you no longer need. The clipboard is emptied before and after every copy.
 
 ## Known limits
 
-- Needs the Microsoft Visual C++ Redistributable (x64) for Tesseract's native code; most Windows 11 PCs have it.
-- If the automated program runs as administrator, run `HdmAutomation.exe` as administrator too, or Windows blocks the mouse and keyboard input.
-- The computer must be unlocked with the program's windows visible while a routine runs (relevant for a future script machine).
-- Window finding, OCR, clicking and exporting have been verified by hand on the real program for the Urology routine only; the logic around them (matching, dates, CSV, step runner and restart) has automated tests.
+- Needs the Microsoft Visual C++ Redistributable (x64) for Tesseract; most Windows 11 PCs have it.
+- If the automated program runs as administrator, run this one as administrator too, or Windows blocks the input.
+- The computer must be unlocked with the program's windows visible while it runs.
+- Window finding, OCR, clicking and copying were verified by hand for the Urology report only. The Front Menu, RAD and window-closing steps are untested.

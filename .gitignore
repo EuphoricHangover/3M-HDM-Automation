@@ -6,4 +6,3 @@ obj/
 tessdata/*.traineddata
 # Debug dumps can contain screen text (possibly PHI). Never commit them.
 dump/
-inspect-*.txt
