@@ -5,7 +5,7 @@ namespace HdmAutomation.Routines;
 public sealed class UrologySurgeryStats : Routine
 {
     private const string Report = "TB-Urology Surgery Stats";
-    private static readonly string? RadDefinition = null;
+    private const string RadDefinition = "TB report Writing";
 
     public override string Name => "Urology Surgery Stats";
     public override string Description => "Opens the report from the front menu, sets the date range, builds it, and exports the sheet to CSV.";
@@ -28,7 +28,7 @@ public sealed class UrologySurgeryStats : Routine
             c.Ui.Window("Management Reporter").Click("Select RAD");
 
             var definitions = c.Ui.Window("Report Access Definitions");
-            if (RadDefinition is not null) definitions.List("TcxGroupBox").Select(RadDefinition);
+            definitions.List("TcxGroupBox").Select(RadDefinition);
             definitions.Click("Select Rad");
             c.Ui.WaitUntilClosed("Report Access Definitions");
         });
