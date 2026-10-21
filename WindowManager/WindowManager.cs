@@ -1,9 +1,9 @@
 using System.Drawing;
 using System.Text;
 
-namespace HdmAutomation.ThreeM;
+namespace HdmAutomation.WindowManager;
 
-public sealed class ThreeMManager : IDisposable
+public sealed class WindowManager : IDisposable
 {
     private const string FrontMenu = "TFormFrontMenu";
     private const string Reporter = "TfrmRepCenter";
@@ -15,7 +15,7 @@ public sealed class ThreeMManager : IDisposable
     private readonly ScreenReader _screen = new();
     private readonly ListSearch _listSearch;
 
-    public ThreeMManager() => _listSearch = new ListSearch(_screen);
+    public WindowManager() => _listSearch = new ListSearch(_screen);
 
     public void SetRad(string rad)
     {

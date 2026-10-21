@@ -1,6 +1,6 @@
 using System.Drawing;
 
-namespace HdmAutomation.ThreeM;
+namespace HdmAutomation.WindowManager;
 
 internal static class RectangleExtensions
 {

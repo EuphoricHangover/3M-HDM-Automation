@@ -1,7 +1,7 @@
 using System.Globalization;
 using ClosedXML.Excel;
 
-namespace HdmAutomation.ThreeM;
+namespace HdmAutomation.WindowManager;
 
 internal static class Workbook
 {

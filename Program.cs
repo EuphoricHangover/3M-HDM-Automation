@@ -1,6 +1,6 @@
 try
 {
-    using var manager = new ThreeMManager();
+    using var manager = new WindowManager();
 
     manager.SetRad("TB report Writing");
     manager.OpenSummaries();

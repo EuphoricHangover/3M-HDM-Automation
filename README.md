@@ -11,7 +11,7 @@ A console program that drives the 3M Health Data Management program through mous
 `Program.cs` is the script. It runs top to bottom and stops at the first problem with a message. To continue after a failure, remove the lines that already finished and run it again.
 
 ```csharp
-using var manager = new ThreeMManager();
+using var manager = new WindowManager();
 
 manager.SetRad("TB report Writing");
 manager.OpenSummaries();
@@ -38,11 +38,11 @@ After `OpenSummaries()` any number of reports from that RAD can be copied. For a
 
 | Folder | Purpose |
 |---|---|
-| `3M` | `ThreeMManager` (the windows and the steps), the list search, and writing to Excel. |
+| `WindowManager` | `WindowManager` (the windows and the steps), the list search, and writing to Excel. |
 | `Automation` | Mouse, keyboard and clipboard. |
 | `OCR` | Reading text from the screen. |
 
-Windows are found directly by their class names (`TFormFrontMenu`, `TfrmRepCenter`, `TfrmRad`, `TfrmSumGrp`, `TfrmSumEdit`, `TFrmViewer`), listed at the top of `3M/ThreeMManager.cs`. Buttons are found by reading the screen.
+Windows are found directly by their class names (`TFormFrontMenu`, `TfrmRepCenter`, `TfrmRad`, `TfrmSumGrp`, `TfrmSumEdit`, `TFrmViewer`), listed at the top of `WindowManager/WindowManager.cs`. Buttons are found by reading the screen.
 
 ## Privacy and limits
 

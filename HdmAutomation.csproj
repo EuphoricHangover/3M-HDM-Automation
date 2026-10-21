@@ -17,7 +17,7 @@
   <ItemGroup>
     <Using Include="HdmAutomation.Automation" />
     <Using Include="HdmAutomation.Ocr" />
-    <Using Include="HdmAutomation.ThreeM" />
+    <Using Include="HdmAutomation.WindowManager" />
   </ItemGroup>
 
   <ItemGroup>
