@@ -2,24 +2,16 @@ using HdmAutomation.Engine;
 
 namespace HdmAutomation.Routines;
 
-public sealed class MyReport : Routine
+public sealed class MyReport : ReportJob
 {
     public override string Name => "My Report";
     public override string Description => "What this routine does.";
-    public override string StartWindowTitle => "Current Summaries";
+    public override string StartWindowTitle => "Front Menu";
 
-    protected override void Define(StepList steps)
+    protected override void Instructions(Script script)
     {
-        steps.Add("First step", c =>
-        {
-            var window = c.Ui.Window("Part of a window title");
-            window.BringToFront();
-        });
-
-        steps.Add("Second step", c =>
-        {
-            var window = c.Ui.Window("Part of another window title");
-            window.RequireText("Text that proves this is the right window");
-        });
+        script.CopyReportData("RAD name", "Report name", "A3");
+        script.CopyReportData("RAD name", "Another report name", "A3");
+        script.WriteToFile("Workbook.xlsx", "Sheet name", "B2");
     }
 }

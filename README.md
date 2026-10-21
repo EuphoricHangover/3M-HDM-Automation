@@ -9,7 +9,7 @@ Automates a pre-2000s Windows program that only works through clicks and key pre
 3. In the window:
    - **Routine:** which job to run. **Detect window** picks the routine whose start window is on screen.
    - **Date range:** `yyyyMMdd-yyyyMMdd`. Defaults to last month. Impossible dates (like `20260431`) are refused.
-   - **Export folder:** where CSV files go. Files are named `<date range>-<name>.csv`.
+   - **Files folder:** the folder that holds the workbooks (for example `QBP`). CSV files saved with `SaveToCsv` go here too, named `<date range>-<name>.csv`.
    - **Start at step:** a run saves its progress after every step. After a failure, this is preset to the step that failed, so **Run** carries on from there. Pick step 1 to start over.
 4. Press **Run**. The program minimizes itself and works through the steps. **Ctrl+Alt+X** (or Stop) cancels at any time.
 
@@ -17,7 +17,7 @@ Optionally tick *Run automatically when the program opens*: it detects the windo
 
 ## Adding a routine
 
-Each routine is one `.cs` file in `src/HdmAutomation.Routines/`. Copy `NewRoutineTemplate.txt`, rename the class, fill in the steps and rebuild; it appears in the list automatically. The full toolkit and the rules for steps are in [docs/WritingRoutines.md](docs/WritingRoutines.md).
+Each routine is one `.cs` file in `src/HdmAutomation.Routines/` made of plain instructions such as `CopyReportData(...)` and `WriteToFile(...)`. Copy `NewRoutineTemplate.txt`, rename the class, write the instructions and rebuild; it appears in the list automatically. The full toolkit and the rules for steps are in [docs/WritingRoutines.md](docs/WritingRoutines.md).
 
 ## Layout
 
@@ -39,7 +39,7 @@ See the last section of [docs/WritingRoutines.md](docs/WritingRoutines.md).
 
 - Everything runs locally; no network calls at runtime.
 - Logs (`%LocalAppData%\HdmAutomation\logs`) and progress files (`...\runs`) hold step names and results only, never screen text.
-- Exported CSVs can contain patient data: choose the export folder accordingly and delete files you no longer need. The clipboard is emptied before and after every copy.
+- Exported CSVs, the temporary `Work` and `Backups` folders and the workbooks can contain patient data: choose the files folder accordingly and delete files you no longer need. The clipboard is emptied before and after every copy.
 
 ## Known limits
 

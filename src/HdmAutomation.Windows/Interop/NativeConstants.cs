@@ -23,6 +23,7 @@ internal static class KeyEventFlag
 
 internal static class WindowMessage
 {
+    public const uint Close = 0x0010;
     public const uint GetText = 0x000D;
     public const uint GetTextLength = 0x000E;
 }

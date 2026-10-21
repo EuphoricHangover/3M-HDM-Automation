@@ -7,6 +7,14 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="ClosedXML" Version="0.104.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="HdmAutomation.Engine.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\HdmAutomation.Core\HdmAutomation.Core.csproj" />
     <ProjectReference Include="..\HdmAutomation.Windows\HdmAutomation.Windows.csproj" />
   </ItemGroup>

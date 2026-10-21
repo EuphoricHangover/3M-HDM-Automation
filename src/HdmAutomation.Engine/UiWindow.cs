@@ -1,5 +1,6 @@
 using System.Drawing;
 using HdmAutomation.Core;
+using HdmAutomation.Windows;
 using HdmAutomation.Windows.Desktop;
 using HdmAutomation.Windows.Input;
 
@@ -29,6 +30,21 @@ public sealed class UiWindow
             throw new StepFailedException("Could not bring the window to the front. Is another program holding focus?");
         }
         return this;
+    }
+
+    public void Close(int waitSeconds = 10)
+    {
+        WindowController.Close(Current().Handle);
+        var deadline = DateTime.UtcNow.AddSeconds(waitSeconds);
+        while (WindowFinder.Exists(_info))
+        {
+            Ui.Context.ThrowIfCancelled();
+            if (DateTime.UtcNow >= deadline)
+            {
+                throw new StepFailedException("The window did not close. It may be asking a question first.");
+            }
+            Ui.Context.Wait(Delay.WindowPoll);
+        }
     }
 
     public UiWindow Place(int x, int y, int width, int height)

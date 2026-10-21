@@ -1,4 +1,3 @@
-using System.Text;
 using HdmAutomation.Core;
 using HdmAutomation.Windows;
 using HdmAutomation.Windows.Desktop;
@@ -22,6 +21,13 @@ public sealed class UiSheet
 
     public (int Rows, int Columns) ExportCsv(string path, string firstCell = "A1", string gotoKey = "f5")
     {
+        var rows = CopyRows(firstCell, gotoKey);
+        CsvFile.Write(path, rows, _window.Ui.Context.Log);
+        return (rows.Count, rows.Max(row => row.Length));
+    }
+
+    public IReadOnlyList<string[]> CopyRows(string firstCell = "A1", string gotoKey = "f5")
+    {
         _window.BringToFront();
         Thread.Sleep(Delay.SheetDraw);
 
@@ -32,8 +38,7 @@ public sealed class UiSheet
         Keyboard.PressChord("ctrl+shift+end");
         Thread.Sleep(Delay.ActionSettle);
 
-        var rows = CopySelection();
-        return WriteCsv(path, rows);
+        return CopySelection();
     }
 
     private void GoToCell(string cell, string gotoKey)
@@ -79,21 +84,5 @@ public sealed class UiSheet
         {
             ClipboardText.Clear();
         }
-    }
-
-    private (int Rows, int Columns) WriteCsv(string path, IReadOnlyList<string[]> rows)
-    {
-        var context = _window.Ui.Context;
-        var columns = rows.Max(row => row.Length);
-        var ragged = rows.Count(row => row.Length != columns);
-        if (ragged > 0) context.Log($"WARNING: {ragged} row(s) have a different number of cells than the widest row.");
-
-        Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(path))!);
-        using (var writer = new StreamWriter(path, append: false, new UTF8Encoding(encoderShouldEmitUTF8Identifier: true)))
-        {
-            TableText.WriteCsv(writer, rows);
-        }
-        context.Log($"Saved {rows.Count} row(s) by {columns} column(s) to {path}");
-        return (rows.Count, columns);
     }
 }

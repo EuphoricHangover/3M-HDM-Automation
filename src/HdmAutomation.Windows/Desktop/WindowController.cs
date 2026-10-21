@@ -5,6 +5,8 @@ namespace HdmAutomation.Windows.Desktop;
 
 public static class WindowController
 {
+    private const uint CloseTimeoutMilliseconds = 2000;
+
     public static bool BringToFront(IntPtr handle)
     {
         RestoreIfMinimized(handle);
@@ -12,6 +14,10 @@ public static class WindowController
         Thread.Sleep(Delay.WindowSettle);
         return User32.GetForegroundWindow() == handle;
     }
+
+    public static void Close(IntPtr handle) =>
+        User32.SendMessageTimeout(
+            handle, WindowMessage.Close, IntPtr.Zero, IntPtr.Zero, SendMessageFlag.AbortIfHung, CloseTimeoutMilliseconds, out _);
 
     public static void Place(IntPtr handle, Rectangle bounds)
     {

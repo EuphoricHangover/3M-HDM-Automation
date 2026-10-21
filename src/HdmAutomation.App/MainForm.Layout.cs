@@ -57,7 +57,7 @@ internal sealed partial class MainForm
         grid.Controls.Add(_detectedLabel, 1, grid.RowCount);
         grid.RowCount++;
         AddRow(grid, "Date range", _rangeBox);
-        AddRow(grid, "Export folder", _outputBox, browse);
+        AddRow(grid, "Files folder", _outputBox, browse);
         AddRow(grid, "Start at step", _stepBox);
         return grid;
     }

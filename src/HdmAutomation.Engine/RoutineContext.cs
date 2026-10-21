@@ -27,6 +27,12 @@ public sealed class RoutineContext
     public string OutputPath(string fileName) =>
         Path.Combine(Parameters.OutputFolder, $"{Parameters.DateRange}-{fileName}");
 
+    public string WorkbookPath(string fileName) => Path.Combine(Parameters.OutputFolder, fileName);
+
+    public string BackupFolder => Path.Combine(Parameters.OutputFolder, "Backups", Parameters.DateRange);
+
+    public string WorkFolder => Path.Combine(Parameters.OutputFolder, "Work", Parameters.DateRange);
+
     public void ThrowIfCancelled() => Cancel.ThrowIfCancellationRequested();
 
     public void Wait(TimeSpan time)

@@ -24,6 +24,8 @@ public sealed class StepList
 {
     internal List<Step> Items { get; } = new();
 
+    internal int Count => Items.Count;
+
     public void Add(string name, Action<RoutineContext> run) => Items.Add(new Step(name, run));
 }
 

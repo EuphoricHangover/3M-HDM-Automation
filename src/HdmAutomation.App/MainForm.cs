@@ -131,7 +131,16 @@ internal sealed partial class MainForm : Form
         _stepBox.Items.Clear();
         if (Selected is not { } routine) return;
 
-        var steps = routine.GetSteps();
+        IReadOnlyList<Step> steps;
+        try
+        {
+            steps = routine.GetSteps();
+        }
+        catch (InvalidOperationException ex)
+        {
+            Log($"'{routine.Name}' has a mistake in its script: {ex.Message}");
+            return;
+        }
         for (var i = 0; i < steps.Count; i++) _stepBox.Items.Add($"{i + 1}. {steps[i].Name}");
 
         _stepBox.SelectedIndex = SuggestedStartStep(routine, steps.Count);
@@ -217,7 +226,7 @@ internal sealed partial class MainForm : Form
         var outputFolder = _outputBox.Text.Trim();
         if (outputFolder.Length == 0)
         {
-            MessageBox.Show(this, "Choose a folder for the exported files.", Text, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            MessageBox.Show(this, "Choose the folder that holds the workbooks.", Text, MessageBoxButtons.OK, MessageBoxIcon.Warning);
             return false;
         }
 
