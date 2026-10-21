@@ -10,9 +10,8 @@ public sealed class QbpMonthly : ReportJob
 
     protected override void Instructions(Script script)
     {
-        script.CopyReportData("TB report Writing", "TB-Urology Surgery Stats", "A3");
-        script.CopyReportData("TB report Writing", "Another report", "A3");
-        script.WriteToFile("Urology.xlsx", "Data", "B2");
+        script.CopyReportToFile("TB report Writing", "TB-Urology Surgery Stats", "A3", "Urology.xlsx", "Data", "B2");
+        script.CopyReportToFile("TB report Writing", "Another report", "A3", "Urology.xlsx", "Other", "B2");
     }
 }
 ```
@@ -27,12 +26,12 @@ public sealed class QbpMonthly : ReportJob
 
 | Instruction | What it does |
 |---|---|
-| `CopyReportData(rad, report, firstCell)` | Goes from the Front Menu to the Reporter, selects the RAD, opens the report in Current Summaries, builds it for the date range typed in the app, and copies the sheet from `firstCell` to the last cell. |
-| `CopyReportData(rad, report, dateRange, firstCell)` | Same with an explicit range such as `"20260401-20260430"`. Use `Script.RunDateRange` for the app's range. |
-| `WriteToFile(workbook, sheet, firstCell)` | Pastes everything copied since the last write or save into the sheet, starting at `firstCell`. |
-| `SaveToCsv(fileName)` | Saves everything copied since the last write or save as a CSV in the files folder. |
+| `CopyReportToFile(rad, report, copyFrom, workbook, sheet, pasteAt)` | One report, start to finish: open the Reporter from the Front Menu, select the RAD, find the report, run it for the app's date range, copy from `copyFrom` to the last cell (go to the cell, then Ctrl+Shift+End), and paste into the workbook sheet at `pasteAt`. |
+| `CopyReportData(rad, report, copyFrom)` | The first half only. Must be followed by a write. A fourth form takes an explicit range such as `"20260401-20260430"` (or `Script.RunDateRange`) before `copyFrom`. |
+| `WriteToFile(workbook, sheet, pasteAt)` | Pastes the data from the `CopyReportData` right before it. |
+| `SaveToCsv(fileName)` | Saves that data as a CSV in the files folder instead. |
 
-Several `CopyReportData` lines in a row are stacked one under the other, in order, before the next `WriteToFile` or `SaveToCsv`.
+Each report is its own copy and paste; nothing is combined. `CopyReportToFile` is simply `CopyReportData` followed by `WriteToFile`, and counts as two steps so a run can restart between them. The program must already be open on the Front Menu when a run starts.
 
 ## Workbooks
 

@@ -10,20 +10,15 @@ internal static class CopiedData
         File.WriteAllText(FilePath(context, stepNumber), JsonSerializer.Serialize(rows));
     }
 
-    public static IReadOnlyList<string[]> Load(RoutineContext context, IEnumerable<int> stepNumbers)
+    public static IReadOnlyList<string[]> Load(RoutineContext context, int stepNumber)
     {
-        var rows = new List<string[]>();
-        foreach (var stepNumber in stepNumbers)
+        var path = FilePath(context, stepNumber);
+        if (!File.Exists(path))
         {
-            var path = FilePath(context, stepNumber);
-            if (!File.Exists(path))
-            {
-                throw new StepFailedException(
-                    $"The data copied in step {stepNumber} is missing. Restart from step {stepNumber}.");
-            }
-            rows.AddRange(JsonSerializer.Deserialize<List<string[]>>(File.ReadAllText(path))!);
+            throw new StepFailedException(
+                $"The data copied in step {stepNumber} is missing. Restart from step {stepNumber}.");
         }
-        return rows;
+        return JsonSerializer.Deserialize<List<string[]>>(File.ReadAllText(path))!;
     }
 
     public static void DeleteAll(RoutineContext context)

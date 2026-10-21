@@ -10,8 +10,7 @@ public sealed class MyReport : ReportJob
 
     protected override void Instructions(Script script)
     {
-        script.CopyReportData("RAD name", "Report name", "A3");
-        script.CopyReportData("RAD name", "Another report name", "A3");
-        script.WriteToFile("Workbook.xlsx", "Sheet name", "B2");
+        script.CopyReportToFile("RAD name", "Report name", "A3", "Workbook.xlsx", "Sheet name", "B2");
+        script.CopyReportToFile("RAD name", "Another report name", "A3", "Workbook.xlsx", "Another sheet", "B2");
     }
 }

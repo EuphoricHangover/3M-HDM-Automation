@@ -17,7 +17,7 @@ Optionally tick *Run automatically when the program opens*: it detects the windo
 
 ## Adding a routine
 
-Each routine is one `.cs` file in `src/HdmAutomation.Routines/` made of plain instructions such as `CopyReportData(...)` and `WriteToFile(...)`. Copy `NewRoutineTemplate.txt`, rename the class, write the instructions and rebuild; it appears in the list automatically. The full toolkit and the rules for steps are in [docs/WritingRoutines.md](docs/WritingRoutines.md).
+Each routine is one `.cs` file in `src/HdmAutomation.Routines/` made of plain instructions, one line per report: `CopyReportToFile(rad, report, copyFrom, workbook, sheet, pasteAt)`. Copy `NewRoutineTemplate.txt`, rename the class, write the instructions and rebuild; it appears in the list automatically. The full toolkit and the rules for steps are in [docs/WritingRoutines.md](docs/WritingRoutines.md).
 
 ## Layout
 
