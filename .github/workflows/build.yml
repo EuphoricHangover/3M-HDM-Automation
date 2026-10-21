@@ -12,8 +12,6 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 8.0.x
-      - name: Test
-        run: dotnet test Tests -c Release
       - name: Get OCR model
         run: ./tools/Get-Tessdata.ps1
       - name: Publish

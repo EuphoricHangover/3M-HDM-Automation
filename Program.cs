@@ -1,5 +1,15 @@
-using var job = Job.Start();
+try
+{
+    using var manager = new ThreeMManager();
 
-job.CopyReportToCsv("TB report Writing", "TB-Urology Surgery Stats", "A3", "urology-surgery-stats.csv");
+    manager.SetRad("TB report Writing");
+    manager.OpenSummaries();
+    manager.CopyReportToExcel("TB-Urology Surgery Stats", "20260901-20260930", "A3", @"C:\QBP\Urology.xlsx", "Data", "B2");
+}
+catch (Exception ex)
+{
+    Console.WriteLine(ex.Message);
+}
 
-job.Finish();
+Console.WriteLine("Press Enter to close.");
+Console.ReadLine();

@@ -1,69 +1,54 @@
 # HDM Automation
 
-A console program that drives a pre-2000s Windows program through clicks and key presses. Windows are found by title, lists are read with offline OCR ([Tesseract](https://github.com/tesseract-ocr/tesseract)), and nothing leaves the computer.
+A console program that drives the 3M Health Data Management program through mouse and keyboard, reads lists with offline OCR (Tesseract), and pastes report data into Excel workbooks. Nothing leaves the computer.
 
 ## Running it
 
-1. Install the .NET 8 SDK, then run `tools\Get-Tessdata.ps1` once to download the OCR model.
-2. `dotnet run -c Release`, or run `bin\Release\net8.0-windows\HdmAutomation.exe` after `dotnet build -c Release`.
-3. Answer the questions: the date range (`yyyyMMdd-yyyyMMdd`, last month by default) and the folder that holds the workbooks.
-4. Open the Front Menu of the program and press Enter. **Ctrl+Alt+X** stops the run.
+1. Install the .NET 8 SDK and run `tools\Get-Tessdata.ps1` once to download the OCR model.
+2. Open the 3M Front Menu.
+3. Edit `Program.cs` for the run, then `dotnet run -c Release`.
 
-If a run stops, start the program again with the same date range. It offers to continue at the step that failed, and you can type any other step number.
-
-## Writing the script
-
-`Program.cs` is the script. Each line handles one report, from the Front Menu to the pasted data:
+`Program.cs` is the script. It runs top to bottom and stops at the first problem with a message. To continue after a failure, remove the lines that already finished and run it again.
 
 ```csharp
-using var job = Job.Start();
+using var manager = new ThreeMManager();
 
-job.CopyReportToFile("TB report Writing", "TB-Urology Surgery Stats", "A3", "Urology.xlsx", "Data", "B2");
-job.CopyReportToCsv("TB report Writing", "Another report", "A3", "another-report.csv");
-
-job.Finish();
+manager.SetRad("TB report Writing");
+manager.OpenSummaries();
+manager.CopyReportToExcel("TB-Urology Surgery Stats", "20260901-20260930", "A3", @"C:\QBP\Urology.xlsx", "Data", "B2");
 ```
 
-| Line | What it does |
+| Call | What it does |
 |---|---|
-| `CopyReportToFile(rad, report, copyFrom, workbook, sheet, pasteAt)` | Opens the Reporter, selects the RAD, finds the report, runs it for the date range, goes to `copyFrom`, selects to the end (Ctrl+Shift+End), copies, and pastes into the sheet at `pasteAt`. |
-| `CopyReportToCsv(rad, report, copyFrom, fileName)` | The same, saving a CSV named `<date range>-<fileName>`. |
+| `SetRad(rad)` | Closes any open report windows, opens the Reporter from the Front Menu, and selects the RAD. |
+| `OpenSummaries()` | Opens Current Summaries from the Reporter. |
+| `CopyReportToExcel(report, dateRange, copyFrom, workbook, sheet, pasteAt)` | Opens the report, runs it for the date range, goes to `copyFrom`, selects to the end (Ctrl+Shift+End), copies, pastes into the workbook sheet at `pasteAt`, and closes the report windows. |
 
-Every line is a step that can be resumed. Workbook names are relative to the workbook folder.
+After `OpenSummaries()` any number of reports from that RAD can be copied. For a different RAD, call `SetRad` again.
 
 ## Workbooks
 
-- Only `.xlsx` files, closed in Excel while the program runs.
-- Only the pasted block changes. If it would cover a formula, nothing is written and the step fails.
-- Numbers are written as numbers. Values with a leading zero, more than 15 digits, an exponent or a date format stay text, so identifiers are never altered.
-- The first time a workbook is written, an untouched copy goes to `Backups\<date range>` in the workbook folder.
-- Cells in the old data area beyond the new block are not cleared.
+- `.xlsx` files, closed in Excel while the program runs.
+- Only the pasted block changes. If it would cover a formula, nothing is written.
+- Numbers are written as numbers. Values with a leading zero or more than 15 digits stay text, so identifiers are not altered.
+- Before the first write to a workbook, a copy is saved in a `Backups` folder next to it.
+- Cells beyond the new block in the old data area are not cleared.
 
-## Layout
+## Folders
 
 | Folder | Purpose |
 |---|---|
-| `Program.cs` | The script. |
-| `Automation/` | Steps, resume state, report navigation, and the window/list/sheet helpers. |
-| `Data/` | Fuzzy name matching, date ranges, clipboard text, CSV and workbook writing. |
-| `Desktop/`, `Input/`, `Interop/` | Windows, screenshots, clipboard, mouse, keyboard and the Win32 calls behind them. |
-| `Ocr/`, `Lists/` | Tesseract and the paged list search. |
-| `Tests/` | Unit tests: `dotnet test Tests`. |
-| `tools/` | `Get-Tessdata.ps1`. |
+| `3M` | Finding and driving the 3M windows, lists and sheets, and writing to Excel. |
+| `Automation` | Mouse, keyboard and clipboard. |
+| `OCR` | Reading text from the screen. |
 
-## Finding class names
+Class names for windows and controls come from Microsoft's free Accessibility Insights for Windows.
 
-The navigation lives in `Automation/ReportNavigator.cs`. Window titles and control classes come from Microsoft's free Accessibility Insights for Windows.
+## Privacy and limits
 
-## Privacy
-
-- Everything runs locally; no network calls at runtime.
-- Logs (`%LocalAppData%\HdmAutomation\logs`) and progress files (`...\runs`) hold step names only, never screen text.
-- Workbooks, CSV files and the `Backups` folder can contain patient data. Keep them in a protected folder and delete what you no longer need. The clipboard is emptied before and after every copy.
-
-## Known limits
-
-- Needs the Microsoft Visual C++ Redistributable (x64) for Tesseract; most Windows 11 PCs have it.
-- If the automated program runs as administrator, run this one as administrator too, or Windows blocks the input.
-- The computer must be unlocked with the program's windows visible while it runs.
-- Window finding, OCR, clicking and copying were verified by hand for the Urology report only. The Front Menu, RAD and window-closing steps are untested.
+- No network calls at runtime. Nothing is logged except progress messages in the console.
+- Workbooks and their `Backups` can contain patient data. Keep them in a protected folder. The clipboard is emptied before and after every copy.
+- Needs the Microsoft Visual C++ Redistributable (x64) for Tesseract.
+- If the 3M program runs as administrator, run this one as administrator too.
+- The computer must be unlocked with the 3M windows visible.
+- Only window finding, list search, double click, typing the date range, Build Now, Yes now and the sheet copy were verified by hand. The Front Menu button, RAD list and closing windows are untested.
